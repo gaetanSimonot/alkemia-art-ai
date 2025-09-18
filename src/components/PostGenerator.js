@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Sparkles, Loader, Check, AlertCircle, Palette } from 'lucide-react';
+import { Copy, Sparkles, Loader, Check, AlertCircle } from 'lucide-react';
 
 const PostGenerator = () => {
   const [figurineName, setFigurineName] = useState('');
@@ -31,6 +31,48 @@ Pour TikTok: Ultra court, viral, jeune et dynamique
 
 Sois créatif et montre que tu connais vraiment le personnage !`);
 
+  // Templates personnalisables
+  const [discordTemplate, setDiscordTemplate] = useState(localStorage.getItem('discordTemplate') || `🎨 **NOUVELLE FIGURINE STL DISPONIBLE** 🎨
+
+📦 **{name}** débarque dans la librairie !
+
+{message}
+
+🖨️ Fichiers optimisés & pré-supportés
+⚡ Compatible toutes imprimantes
+🎯 Qualité de détails exceptionnelle
+
+👉 Disponible maintenant sur notre boutique !
+💬 Partagez vos prints dans #creations
+
+#AlkemiaArt #3DPrinting #STL`);
+
+  const [instagramTemplate, setInstagramTemplate] = useState(localStorage.getItem('instagramTemplate') || `✨ NOUVEAUTÉ : {name} ✨
+
+{message}
+
+🎯 STL haute qualité maintenant disponible
+🖨️ Print-ready avec supports optimisés
+🎨 Rejoignez des milliers de makers satisfaits
+
+➡️ Lien boutique en bio
+
+#AlkemiaArt #3DPrinting #3DPrint #STLFiles #Figurine3D
+#MiniaturePainting #3DPrintedMiniatures #3DDesign
+#PrintableMiniatures #TabletopGaming #3DPrintingCommunity`);
+
+  const [tiktokTemplate, setTiktokTemplate] = useState(localStorage.getItem('tiktokTemplate') || `🔥 DROP : {name} 🔥
+
+{message}
+
+✅ Dispo maintenant
+✅ Fichiers STL HD
+✅ Print & Play
+
+#3DPrinting #STL #Figurine #3DPrint #AlkemiaArt
+#PrintingLife #fyp #foryou #viral #3DPrinter
+#GeekLife #CollectorItem`);
+
   useEffect(() => {
     // Vérifier si l'API est configurée au chargement
     if (!apiUrl) {
@@ -41,6 +83,9 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
   const saveConfig = () => {
     localStorage.setItem('apiUrl', apiUrl);
     localStorage.setItem('agent', agent);
+    localStorage.setItem('discordTemplate', discordTemplate);
+    localStorage.setItem('instagramTemplate', instagramTemplate);
+    localStorage.setItem('tiktokTemplate', tiktokTemplate);
     setShowApiConfig(false);
     setError('');
   };
@@ -114,50 +159,21 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
   };
 
   const formatDiscordPost = (name, message) => {
-    return `🎨 **NOUVELLE FIGURINE STL DISPONIBLE** 🎨
-
-📦 **${name}** débarque dans la librairie !
-
-${message}
-
-🖨️ Fichiers optimisés & pré-supportés
-⚡ Compatible toutes imprimantes
-🎯 Qualité de détails exceptionnelle
-
-👉 Disponible maintenant sur notre boutique !
-💬 Partagez vos prints dans #creations
-
-#AlkemiaArt #3DPrinting #STL`;
+    return discordTemplate
+      .replace(/{name}/g, name || 'Personnage')
+      .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
   const formatInstagramPost = (name, message) => {
-    return `✨ NOUVEAUTÉ : ${name} ✨
-
-${message}
-
-🎯 STL haute qualité maintenant disponible
-🖨️ Print-ready avec supports optimisés
-🎨 Rejoignez des milliers de makers satisfaits
-
-➡️ Lien boutique en bio
-
-#AlkemiaArt #3DPrinting #3DPrint #STLFiles #Figurine3D
-#MiniaturePainting #3DPrintedMiniatures #3DDesign
-#PrintableMiniatures #TabletopGaming #3DPrintingCommunity`;
+    return instagramTemplate
+      .replace(/{name}/g, name || 'Personnage')
+      .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
   const formatTikTokPost = (name, message) => {
-    return `🔥 DROP : ${name} 🔥
-
-${message}
-
-✅ Dispo maintenant
-✅ Fichiers STL HD
-✅ Print & Play
-
-#3DPrinting #STL #Figurine #3DPrint #AlkemiaArt
-#PrintingLife #fyp #foryou #viral #3DPrinter
-#GeekLife #CollectorItem`;
+    return tiktokTemplate
+      .replace(/{name}/g, name || 'Personnage')
+      .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
   const copyToClipboard = async (text, platform) => {
@@ -183,9 +199,9 @@ ${message}
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <Palette className="text-purple-400" size={40} />
+            <img src="/logo.png" alt="Alkemia Art" className="w-12 h-12" />
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
-              Alkemia Art AI
+              Alkemia Art Tool
             </h1>
           </div>
           <p className="text-gray-300 text-sm md:text-base">
@@ -370,24 +386,23 @@ ${message}
         {/* Modal de configuration */}
         {showApiConfig && (
           <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/10">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-white/10">
               <h3 className="text-2xl font-bold text-white mb-6">⚙️ Configuration</h3>
 
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    URL de votre API Vercel
-                  </label>
-                  <input
-                    type="text"
-                    value={apiUrl}
-                    onChange={(e) => setApiUrl(e.target.value)}
-                    className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="https://votre-projet.vercel.app/api/generate-posts"
-                  />
-                  <p className="text-xs text-gray-400 mt-2">
-                    Sera fournie après le déploiement sur Vercel
-                  </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      URL de votre API Vercel
+                    </label>
+                    <input
+                      type="text"
+                      value={apiUrl}
+                      onChange={(e) => setApiUrl(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="https://votre-projet.vercel.app/api/generate-posts"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -397,12 +412,56 @@ ${message}
                   <textarea
                     value={agent}
                     onChange={(e) => setAgent(e.target.value)}
-                    className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-64 font-mono text-sm"
+                    className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
                     placeholder="Instructions pour personnaliser le comportement de l'IA..."
                   />
-                  <p className="text-xs text-gray-400 mt-2">
-                    Modifiez ces instructions pour changer comment l'IA génère les posts
-                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Template Discord
+                    </label>
+                    <textarea
+                      value={discordTemplate}
+                      onChange={(e) => setDiscordTemplate(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                      placeholder="Utilisez {name} et {message}"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Variables: {'{name}'} {'{message}'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Template Instagram
+                    </label>
+                    <textarea
+                      value={instagramTemplate}
+                      onChange={(e) => setInstagramTemplate(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                      placeholder="Utilisez {name} et {message}"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Variables: {'{name}'} {'{message}'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Template TikTok
+                    </label>
+                    <textarea
+                      value={tiktokTemplate}
+                      onChange={(e) => setTiktokTemplate(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                      placeholder="Utilisez {name} et {message}"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Variables: {'{name}'} {'{message}'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
