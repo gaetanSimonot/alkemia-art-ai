@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Canvas Solutions</title>
+    <script src="https://unpkg.com/konva@9/konva.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            margin-bottom: 60px;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 10px;
+        }
+        .canvas-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            display: inline-block;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #45a049; }
+        .drag-zone {
+            border: 3px dashed #666;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+            text-align: center;
+            background: #333;
+        }
+        .drag-zone.dragover {
+            border-color: #4CAF50;
+            background: #2d4a2d;
+        }
+        input[type="file"] {
+            margin: 10px;
+            padding: 10px;
+            background: #333;
+            color: white;
+            border: 1px solid #666;
+            border-radius: 5px;
+        }
+        h1, h2 { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <h1>🎨 Test de Solutions Canvas - Éditeur Type Photoshop</h1>
+    <p>Testez ces 3 solutions et dites-moi laquelle est la plus ergonomique !</p>
+
+    <!-- SOLUTION 1: Konva.js -->
+    <div class="test-section">
+        <h2>Solution 1: Konva.js (Recommandée pour performances)</h2>
+        <div class="drag-zone" id="konva-drop">
+            📁 Glissez une image ici ou utilisez le bouton
+        </div>
+        <div class="controls">
+            <input type="file" id="konva-file" accept="image/*">
+            <button onclick="addKonvaText()">Ajouter Texte</button>
+            <button onclick="exportKonva()">Exporter PNG</button>
+            <button onclick="clearKonva()">Effacer</button>
+        </div>
+        <div class="canvas-container">
+            <div id="konva-container"></div>
+        </div>
+        <p><strong>Avantages:</strong> Très fluide, drag naturel, zoom, rotation touch</p>
+    </div>
+
+    <!-- SOLUTION 2: HTML5 Canvas Natif -->
+    <div class="test-section">
+        <h2>Solution 2: HTML5 Canvas Natif (Ultra-rapide)</h2>
+        <div class="drag-zone" id="native-drop">
+            📁 Glissez une image ici
+        </div>
+        <div class="controls">
+            <input type="file" id="native-file" accept="image/*">
+            <button onclick="addNativeText()">Ajouter Texte</button>
+            <button onclick="exportNative()">Exporter PNG</button>
+            <button onclick="clearNative()">Effacer</button>
+        </div>
+        <div class="canvas-container">
+            <canvas id="native-canvas" width="400" height="400" style="border: 1px solid #ddd; cursor: crosshair;"></canvas>
+        </div>
+        <p><strong>Avantages:</strong> Aucune dépendance, très rapide, contrôle total</p>
+    </div>
+
+    <!-- SOLUTION 3: Fabric.js Optimisé -->
+    <div class="test-section">
+        <h2>Solution 3: Fabric.js Optimisé (Plus stable)</h2>
+        <div class="drag-zone" id="fabric-drop">
+            📁 Glissez une image ici
+        </div>
+        <div class="controls">
+            <input type="file" id="fabric-file" accept="image/*">
+            <button onclick="addFabricText()">Ajouter Texte</button>
+            <button onclick="exportFabric()">Exporter PNG</button>
+            <button onclick="clearFabric()">Effacer</button>
+        </div>
+        <div class="canvas-container">
+            <canvas id="fabric-canvas" width="400" height="400"></canvas>
+        </div>
+        <p><strong>Avantages:</strong> Mature, beaucoup de fonctionnalités, communauté</p>
+    </div>
+
+<script>
+// ========================================
+// SOLUTION 1: KONVA.JS
+// ========================================
+let konvaStage, konvaLayer;
+
+function initKonva() {
+    konvaStage = new Konva.Stage({
+        container: 'konva-container',
+        width: 400,
+        height: 400
+    });
+
+    konvaLayer = new Konva.Layer();
+    konvaStage.add(konvaLayer);
+
+    // Background
+    const bg = new Konva.Rect({
+        x: 0, y: 0,
+        width: 400, height: 400,
+        fill: '#f0f0f0'
+    });
+    konvaLayer.add(bg);
+    konvaLayer.draw();
+}
+
+function addKonvaImage(src) {
+    const imageObj = new Image();
+    imageObj.onload = function() {
+        const konvaImage = new Konva.Image({
+            x: 50, y: 50,
+            image: imageObj,
+            width: 200, height: 200,
+            draggable: true
+        });
+
+        // Transformer pour resize/rotate
+        const tr = new Konva.Transformer();
+        konvaLayer.add(konvaImage);
+        konvaLayer.add(tr);
+        tr.nodes([konvaImage]);
+
+        // Double-click pour sélectionner
+        konvaImage.on('dblclick', () => tr.nodes([konvaImage]));
+
+        konvaLayer.draw();
+    };
+    imageObj.src = src;
+}
+
+function addKonvaText() {
+    const text = new Konva.Text({
+        x: 100, y: 100,
+        text: 'Double-cliquez pour éditer',
+        fontSize: 24,
+        fontFamily: 'Bebas Neue, Arial',
+        fill: '#ff6b35',
+        draggable: true
+    });
+
+    // Edition de texte
+    text.on('dblclick', () => {
+        const newText = prompt('Nouveau texte:', text.text());
+        if (newText) {
+            text.text(newText);
+            konvaLayer.draw();
+        }
+    });
+
+    konvaLayer.add(text);
+    konvaLayer.draw();
+}
+
+function exportKonva() {
+    const dataURL = konvaStage.toDataURL({ quality: 1 });
+    const link = document.createElement('a');
+    link.download = 'konva-export.png';
+    link.href = dataURL;
+    link.click();
+}
+
+function clearKonva() {
+    konvaLayer.destroyChildren();
+    const bg = new Konva.Rect({
+        x: 0, y: 0,
+        width: 400, height: 400,
+        fill: '#f0f0f0'
+    });
+    konvaLayer.add(bg);
+    konvaLayer.draw();
+}
+
+// ========================================
+// SOLUTION 2: HTML5 CANVAS NATIF
+// ========================================
+let nativeCanvas, nativeCtx, nativeObjects = [];
+
+function initNative() {
+    nativeCanvas = document.getElementById('native-canvas');
+    nativeCtx = nativeCanvas.getContext('2d');
+
+    // Background
+    nativeCtx.fillStyle = '#f0f0f0';
+    nativeCtx.fillRect(0, 0, 400, 400);
+
+    // Mouse events pour drag
+    let isDragging = false;
+    let dragObject = null;
+    let startX, startY;
+
+    nativeCanvas.addEventListener('mousedown', (e) => {
+        const rect = nativeCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Chercher un objet sous le curseur
+        for (let obj of nativeObjects) {
+            if (x >= obj.x && x <= obj.x + obj.width &&
+                y >= obj.y && y <= obj.y + obj.height) {
+                isDragging = true;
+                dragObject = obj;
+                startX = x - obj.x;
+                startY = y - obj.y;
+                break;
+            }
+        }
+    });
+
+    nativeCanvas.addEventListener('mousemove', (e) => {
+        if (isDragging && dragObject) {
+            const rect = nativeCanvas.getBoundingClientRect();
+            dragObject.x = e.clientX - rect.left - startX;
+            dragObject.y = e.clientY - rect.top - startY;
+            redrawNative();
+        }
+    });
+
+    nativeCanvas.addEventListener('mouseup', () => {
+        isDragging = false;
+        dragObject = null;
+    });
+
+    // Double-click pour éditer texte
+    nativeCanvas.addEventListener('dblclick', (e) => {
+        const rect = nativeCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        for (let obj of nativeObjects) {
+            if (obj.type === 'text' && x >= obj.x && x <= obj.x + obj.width &&
+                y >= obj.y && y <= obj.y + obj.height) {
+                const newText = prompt('Nouveau texte:', obj.text);
+                if (newText) {
+                    obj.text = newText;
+                    redrawNative();
+                }
+                break;
+            }
+        }
+    });
+}
+
+function addNativeImage(src) {
+    const img = new Image();
+    img.onload = function() {
+        nativeObjects.push({
+            type: 'image',
+            img: img,
+            x: 50, y: 50,
+            width: 200, height: 200
+        });
+        redrawNative();
+    };
+    img.src = src;
+}
+
+function addNativeText() {
+    nativeObjects.push({
+        type: 'text',
+        text: 'Double-cliquez pour éditer',
+        x: 100, y: 100,
+        width: 200, height: 30,
+        fontSize: 24,
+        color: '#ff6b35'
+    });
+    redrawNative();
+}
+
+function redrawNative() {
+    nativeCtx.clearRect(0, 0, 400, 400);
+
+    // Background
+    nativeCtx.fillStyle = '#f0f0f0';
+    nativeCtx.fillRect(0, 0, 400, 400);
+
+    // Draw objects
+    for (let obj of nativeObjects) {
+        if (obj.type === 'image') {
+            nativeCtx.drawImage(obj.img, obj.x, obj.y, obj.width, obj.height);
+        } else if (obj.type === 'text') {
+            nativeCtx.font = `${obj.fontSize}px Bebas Neue, Arial`;
+            nativeCtx.fillStyle = obj.color;
+            nativeCtx.fillText(obj.text, obj.x, obj.y + obj.fontSize);
+        }
+    }
+}
+
+function exportNative() {
+    const dataURL = nativeCanvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = 'native-export.png';
+    link.href = dataURL;
+    link.click();
+}
+
+function clearNative() {
+    nativeObjects = [];
+    redrawNative();
+}
+
+// ========================================
+// SOLUTION 3: FABRIC.JS OPTIMISÉ
+// ========================================
+let fabricCanvas;
+
+function initFabric() {
+    fabricCanvas = new fabric.Canvas('fabric-canvas', {
+        backgroundColor: '#f0f0f0',
+        selection: true,
+        allowTouchScrolling: true
+    });
+
+    // Double-click pour éditer texte
+    fabricCanvas.on('mouse:dblclick', function(options) {
+        if (options.target && options.target.type === 'text') {
+            options.target.enterEditing();
+            options.target.selectAll();
+        }
+    });
+}
+
+function addFabricImage(src) {
+    fabric.Image.fromURL(src, function(oImg) {
+        oImg.set({
+            left: 50,
+            top: 50,
+            scaleX: 0.5,
+            scaleY: 0.5,
+            selectable: true,
+            hasControls: true,
+            hasBorders: true
+        });
+        fabricCanvas.add(oImg);
+        fabricCanvas.setActiveObject(oImg);
+    });
+}
+
+function addFabricText() {
+    const text = new fabric.Text('Double-cliquez pour éditer', {
+        left: 100,
+        top: 100,
+        fontSize: 24,
+        fontFamily: 'Bebas Neue, Arial',
+        fill: '#ff6b35',
+        selectable: true,
+        hasControls: true,
+        hasBorders: true,
+        editable: true
+    });
+    fabricCanvas.add(text);
+    fabricCanvas.setActiveObject(text);
+}
+
+function exportFabric() {
+    const dataURL = fabricCanvas.toDataURL({
+        format: 'png',
+        quality: 1
+    });
+    const link = document.createElement('a');
+    link.download = 'fabric-export.png';
+    link.href = dataURL;
+    link.click();
+}
+
+function clearFabric() {
+    fabricCanvas.clear();
+    fabricCanvas.setBackgroundColor('#f0f0f0', fabricCanvas.renderAll.bind(fabricCanvas));
+}
+
+// ========================================
+// DRAG & DROP POUR TOUTES LES SOLUTIONS
+// ========================================
+function setupDragDrop() {
+    // Konva
+    setupDropZone('konva-drop', addKonvaImage);
+    document.getElementById('konva-file').addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => addKonvaImage(e.target.result);
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+
+    // Native
+    setupDropZone('native-drop', addNativeImage);
+    document.getElementById('native-file').addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => addNativeImage(e.target.result);
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+
+    // Fabric
+    setupDropZone('fabric-drop', addFabricImage);
+    document.getElementById('fabric-file').addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => addFabricImage(e.target.result);
+            reader.readAsDataURL(e.target.files[0]);
+        }
+    });
+}
+
+function setupDropZone(elementId, callback) {
+    const dropZone = document.getElementById(elementId);
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (e) => callback(e.target.result);
+            reader.readAsDataURL(files[0]);
+        }
+    });
+}
+
+// INITIALISATION
+window.onload = function() {
+    initKonva();
+    initNative();
+    initFabric();
+    setupDragDrop();
+};
+
+</script>
+
+</body>
+</html>
