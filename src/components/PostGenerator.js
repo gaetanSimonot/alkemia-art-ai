@@ -165,32 +165,41 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
   };
 
   const formatDiscordPost = (name, message) => {
+    // Utilise le nom formaté par l'IA, ou le nom tapé par l'utilisateur, ou "Personnage" en dernier recours
+    const characterName = name || figurineName || 'Personnage';
+
     const title = discordTitle
-      .replace(/{name}/g, name || 'Personnage');
+      .replace(/{name}/g, characterName);
 
     return discordTemplate
       .replace(/{title}/g, title)
-      .replace(/{name}/g, name || 'Personnage')
+      .replace(/{name}/g, characterName)
       .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
   const formatInstagramPost = (name, message) => {
+    // Utilise le nom formaté par l'IA, ou le nom tapé par l'utilisateur, ou "Personnage" en dernier recours
+    const characterName = name || figurineName || 'Personnage';
+
     const title = instagramTitle
-      .replace(/{name}/g, name || 'Personnage');
+      .replace(/{name}/g, characterName);
 
     return instagramTemplate
       .replace(/{title}/g, title)
-      .replace(/{name}/g, name || 'Personnage')
+      .replace(/{name}/g, characterName)
       .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
   const formatTikTokPost = (name, message) => {
+    // Utilise le nom formaté par l'IA, ou le nom tapé par l'utilisateur, ou "Personnage" en dernier recours
+    const characterName = name || figurineName || 'Personnage';
+
     const title = tiktokTitle
-      .replace(/{name}/g, name || 'Personnage');
+      .replace(/{name}/g, characterName);
 
     return tiktokTemplate
       .replace(/{title}/g, title)
-      .replace(/{name}/g, name || 'Personnage')
+      .replace(/{name}/g, characterName)
       .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
@@ -209,6 +218,22 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
     if (e.key === 'Enter' && !isGenerating) {
       generatePosts();
     }
+  };
+
+  // Fonction de prévisualisation sans API
+  const previewPosts = () => {
+    if (!figurineName.trim()) {
+      setError('Entrez un nom de personnage pour la prévisualisation');
+      return;
+    }
+
+    setGeneratedPosts({
+      discord: formatDiscordPost(null, 'Ceci est un aperçu du message généré par l\'IA pour ce personnage.'),
+      instagram: formatInstagramPost(null, 'Message Instagram personnalisé qui sera généré par l\'IA selon vos paramètres.'),
+      tiktok: formatTikTokPost(null, 'Message TikTok court et viral pour ce personnage !'),
+      formattedName: figurineName
+    });
+    setError('');
   };
 
   return (
@@ -240,23 +265,32 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
                 className="w-full px-5 py-4 rounded-xl bg-black/30 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
               />
             </div>
-            <button
-              onClick={generatePosts}
-              disabled={isGenerating || !figurineName.trim()}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-700 hover:to-pink-700 transition-all flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-purple-500/25"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader className="animate-spin" size={20} />
-                  <span>Génération...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={20} />
-                  <span>Générer</span>
-                </>
-              )}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={previewPosts}
+                disabled={!figurineName.trim()}
+                className="px-6 py-4 bg-gray-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-all flex items-center justify-center gap-2 text-lg"
+              >
+                👁️ <span>Aperçu</span>
+              </button>
+              <button
+                onClick={generatePosts}
+                disabled={isGenerating || !figurineName.trim()}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-700 hover:to-pink-700 transition-all flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-purple-500/25"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader className="animate-spin" size={20} />
+                    <span>Génération...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    <span>Générer IA</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Nom reformulé */}
