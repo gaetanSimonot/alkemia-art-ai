@@ -76,6 +76,17 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
 #PrintingLife #fyp #foryou #viral #3DPrinter
 #GeekLife #CollectorItem`);
 
+  // Corrections personnalisées des noms
+  const [nameCorrections, setNameCorrections] = useState(localStorage.getItem('nameCorrections') || JSON.stringify({
+    'vegeta': 'VEGETA',
+    'dbz vegeta': 'VEGETA de Dragon Ball Z',
+    'goku': 'GOKU',
+    'naruto': 'NARUTO Uzumaki',
+    'luffy': 'MONKEY D. LUFFY',
+    'spiderman': 'SPIDER-MAN',
+    'spider man': 'SPIDER-MAN'
+  }));
+
   useEffect(() => {
     // Vérifier si l'API est configurée au chargement
     if (!apiUrl) {
@@ -92,6 +103,7 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
     localStorage.setItem('instagramTemplate', instagramTemplate);
     localStorage.setItem('tiktokTitle', tiktokTitle);
     localStorage.setItem('tiktokTemplate', tiktokTemplate);
+    localStorage.setItem('nameCorrections', nameCorrections);
     setShowApiConfig(false);
     setError('');
   };
@@ -220,6 +232,33 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
     }
   };
 
+  // Fonction pour formater intelligemment le nom du personnage
+  const formatCharacterName = (input) => {
+    if (!input) return 'Personnage';
+
+    // Nettoie et formate le nom
+    const cleaned = input.trim();
+
+    try {
+      // Utilise les corrections personnalisées de l'utilisateur
+      const corrections = JSON.parse(nameCorrections);
+
+      // Cherche une correction exacte
+      const lowerInput = cleaned.toLowerCase();
+      if (corrections[lowerInput]) {
+        return corrections[lowerInput];
+      }
+    } catch (error) {
+      console.error('Erreur parsing nameCorrections:', error);
+    }
+
+    // Sinon, applique une capitalisation intelligente
+    return cleaned
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // Fonction de prévisualisation sans API
   const previewPosts = () => {
     if (!figurineName.trim()) {
@@ -227,11 +266,13 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
       return;
     }
 
+    const formattedName = formatCharacterName(figurineName);
+
     setGeneratedPosts({
-      discord: formatDiscordPost(null, 'Ceci est un aperçu du message généré par l\'IA pour ce personnage.'),
-      instagram: formatInstagramPost(null, 'Message Instagram personnalisé qui sera généré par l\'IA selon vos paramètres.'),
-      tiktok: formatTikTokPost(null, 'Message TikTok court et viral pour ce personnage !'),
-      formattedName: figurineName
+      discord: formatDiscordPost(formattedName, 'Ceci est un aperçu du message généré par l\'IA pour ce personnage.'),
+      instagram: formatInstagramPost(formattedName, 'Message Instagram personnalisé qui sera généré par l\'IA selon vos paramètres.'),
+      tiktok: formatTikTokPost(formattedName, 'Message TikTok court et viral pour ce personnage !'),
+      formattedName: formattedName
     });
     setError('');
   };
@@ -457,16 +498,32 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Agent IA (Instructions pour ChatGPT)
-                  </label>
-                  <textarea
-                    value={agent}
-                    onChange={(e) => setAgent(e.target.value)}
-                    className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                    placeholder="Instructions pour personnaliser le comportement de l'IA..."
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Agent IA (Instructions pour ChatGPT)
+                    </label>
+                    <textarea
+                      value={agent}
+                      onChange={(e) => setAgent(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                      placeholder="Instructions pour personnaliser le comportement de l'IA..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Corrections de noms (JSON)
+                    </label>
+                    <textarea
+                      value={nameCorrections}
+                      onChange={(e) => setNameCorrections(e.target.value)}
+                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                      placeholder='{"vegeta": "VEGETA", "goku": "GOKU"}'
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Format: {'"input": "OUTPUT FORMATÉ"'}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
