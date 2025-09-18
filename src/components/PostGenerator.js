@@ -77,7 +77,7 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
 #GeekLife #CollectorItem`);
 
   // Corrections personnalisées des noms
-  const [nameCorrections, setNameCorrections] = useState(localStorage.getItem('nameCorrections') || JSON.stringify({
+  const defaultCorrections = {
     'vegeta': 'VEGETA',
     'dbz vegeta': 'VEGETA de Dragon Ball Z',
     'goku': 'GOKU',
@@ -85,7 +85,11 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
     'luffy': 'MONKEY D. LUFFY',
     'spiderman': 'SPIDER-MAN',
     'spider man': 'SPIDER-MAN'
-  }));
+  };
+
+  const [nameCorrections, setNameCorrections] = useState(
+    localStorage.getItem('nameCorrections') || JSON.stringify(defaultCorrections, null, 2)
+  );
 
   useEffect(() => {
     // Vérifier si l'API est configurée au chargement
@@ -106,6 +110,16 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
     localStorage.setItem('nameCorrections', nameCorrections);
     setShowApiConfig(false);
     setError('');
+  };
+
+  const resetToDefaults = () => {
+    if (window.confirm('Êtes-vous sûr de vouloir restaurer la configuration par défaut ? Cette action est irréversible.')) {
+      // Efface tout le localStorage
+      localStorage.clear();
+
+      // Recharge la page pour réinitialiser les states
+      window.location.reload();
+    }
   };
 
   const generatePosts = async () => {
@@ -278,364 +292,391 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <img src="/logo.png?v=2" alt="Alkemia Art" className="w-12 h-12 object-contain" />
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
-              Alkemia Art Tool
-            </h1>
-          </div>
-          <p className="text-gray-300 text-sm md:text-base">
-            Génération intelligente de posts pour vos figurines STL
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 overflow-hidden relative">
+      {/* Background decorative sculptures - subtle */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Goldorak en arrière-plan, très subtil */}
+        <div className="absolute top-20 right-10 opacity-5 transform rotate-12 scale-75">
+          <img
+            src="/rendergoldorak.bip.246.png"
+            alt=""
+            className="w-96 h-auto filter grayscale"
+          />
         </div>
 
-        {/* Barre de recherche */}
-        <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 mb-6 border border-white/10">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                placeholder="Tapez un nom de personnage (ex: dbz vegeta, spider man, naruto...)"
-                value={figurineName}
-                onChange={(e) => setFigurineName(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="w-full px-5 py-4 rounded-xl bg-black/30 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
-              />
+        {/* Une autre sculpture en bas à gauche */}
+        <div className="absolute bottom-10 left-10 opacity-3 transform -rotate-6 scale-50">
+          <img
+            src="/untitled.215.png"
+            alt=""
+            className="w-64 h-auto filter grayscale"
+          />
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+
+          {/* Header Premium */}
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <img src="/logo.png?v=3" alt="Alkemia Art" className="w-16 h-16 object-contain" />
+              <div>
+                <h1 className="text-5xl md:text-6xl font-light bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
+                  Alkemia Art
+                </h1>
+                <h2 className="text-2xl md:text-3xl font-extralight text-purple-300 -mt-2">
+                  Tool
+                </h2>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={previewPosts}
-                disabled={!figurineName.trim()}
-                className="px-6 py-4 bg-gray-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-all flex items-center justify-center gap-2 text-lg"
-              >
-                👁️ <span>Aperçu</span>
-              </button>
-              <button
-                onClick={generatePosts}
-                disabled={isGenerating || !figurineName.trim()}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-700 hover:to-pink-700 transition-all flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-purple-500/25"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader className="animate-spin" size={20} />
-                    <span>Génération...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={20} />
-                    <span>Générer IA</span>
-                  </>
-                )}
-              </button>
+            <p className="text-gray-400 text-lg font-light max-w-2xl mx-auto">
+              Générateur intelligent de contenus marketing pour vos créations STL
+            </p>
+          </div>
+
+          {/* Interface principale épurée */}
+          <div className="max-w-4xl mx-auto mb-16">
+            <div className="bg-white/5 backdrop-blur-xl rounded-3xl border border-white/10 p-8 shadow-2xl">
+
+              {/* Champ de saisie premium */}
+              <div className="flex flex-col lg:flex-row gap-4 mb-8">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Nom du personnage (ex: Vegeta, Spider-Man, Naruto...)"
+                    value={figurineName}
+                    onChange={(e) => setFigurineName(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    className="w-full px-6 py-4 rounded-2xl bg-black/20 text-white text-xl placeholder-gray-500 border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={previewPosts}
+                    disabled={!figurineName.trim()}
+                    className="px-8 py-4 bg-gray-600/80 text-white rounded-2xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-500/80 transition-all flex items-center gap-3 text-lg backdrop-blur-sm border border-gray-500/30"
+                  >
+                    👁️ <span>Aperçu</span>
+                  </button>
+
+                  <button
+                    onClick={generatePosts}
+                    disabled={isGenerating || !figurineName.trim()}
+                    className="px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-600 hover:to-pink-600 transition-all flex items-center gap-3 text-lg shadow-lg hover:shadow-purple-500/25"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader className="animate-spin" size={20} />
+                        <span>Génération...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={20} />
+                        <span>Générer</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Personnage identifié */}
+              {generatedPosts.formattedName && (
+                <div className="mb-8 text-center">
+                  <div className="inline-block px-6 py-3 bg-purple-500/20 rounded-full border border-purple-400/30">
+                    <span className="text-purple-300 text-sm">Personnage identifié :</span>
+                    <span className="text-white font-semibold ml-2 text-lg">{generatedPosts.formattedName}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Nom reformulé */}
-          {generatedPosts.formattedName && (
-            <div className="mt-4 px-4 py-2 bg-purple-500/20 rounded-lg inline-block">
-              <span className="text-purple-300 text-sm">Personnage identifié :</span>
-              <span className="text-white font-bold ml-2">{generatedPosts.formattedName}</span>
+          {/* Message d'erreur */}
+          {error && (
+            <div className="max-w-4xl mx-auto mb-8">
+              <div className="bg-red-500/20 border border-red-400/30 text-red-200 rounded-2xl p-6 flex items-start gap-3 backdrop-blur-sm">
+                <AlertCircle size={24} className="mt-1 flex-shrink-0" />
+                <span className="text-lg">{error}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Résultats - Design moderne */}
+          {generatedPosts.discord && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+
+              {/* Discord Card */}
+              <div className="group">
+                <div className="bg-gradient-to-br from-indigo-900/40 to-indigo-800/20 backdrop-blur-xl rounded-3xl border border-indigo-400/20 p-8 hover:border-indigo-400/40 transition-all duration-300 shadow-xl hover:shadow-indigo-500/10">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-xl">D</span>
+                      </div>
+                      <h3 className="text-2xl font-semibold text-white">Discord</h3>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(generatedPosts.discord, 'discord')}
+                      className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 font-medium ${
+                        copiedPlatform === 'discord'
+                          ? 'bg-green-500 text-white shadow-lg'
+                          : 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-md hover:shadow-lg'
+                      }`}
+                    >
+                      {copiedPlatform === 'discord' ? (
+                        <>
+                          <Check size={18} />
+                          <span>Copié!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={18} />
+                          <span>Copier</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="bg-black/30 rounded-2xl p-6 max-h-96 overflow-y-auto border border-white/5">
+                    <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                      {generatedPosts.discord}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instagram Card */}
+              <div className="group">
+                <div className="bg-gradient-to-br from-pink-900/40 to-orange-800/20 backdrop-blur-xl rounded-3xl border border-pink-400/20 p-8 hover:border-pink-400/40 transition-all duration-300 shadow-xl hover:shadow-pink-500/10">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-white font-bold text-xl">I</span>
+                      </div>
+                      <h3 className="text-2xl font-semibold text-white">Instagram</h3>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(generatedPosts.instagram, 'instagram')}
+                      className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 font-medium ${
+                        copiedPlatform === 'instagram'
+                          ? 'bg-green-500 text-white shadow-lg'
+                          : 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white hover:opacity-90 shadow-md hover:shadow-lg'
+                      }`}
+                    >
+                      {copiedPlatform === 'instagram' ? (
+                        <>
+                          <Check size={18} />
+                          <span>Copié!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={18} />
+                          <span>Copier</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="bg-black/30 rounded-2xl p-6 max-h-96 overflow-y-auto border border-white/5">
+                    <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                      {generatedPosts.instagram}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* TikTok Card */}
+              <div className="group">
+                <div className="bg-gradient-to-br from-gray-900/40 to-gray-800/20 backdrop-blur-xl rounded-3xl border border-gray-400/20 p-8 hover:border-gray-400/40 transition-all duration-300 shadow-xl hover:shadow-gray-500/10">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg border border-white/20">
+                        <span className="text-white font-bold text-xl">T</span>
+                      </div>
+                      <h3 className="text-2xl font-semibold text-white">TikTok</h3>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(generatedPosts.tiktok, 'tiktok')}
+                      className={`px-6 py-3 rounded-xl transition-all flex items-center gap-2 font-medium ${
+                        copiedPlatform === 'tiktok'
+                          ? 'bg-green-500 text-white shadow-lg'
+                          : 'bg-black text-white hover:bg-gray-900 shadow-md hover:shadow-lg border border-white/20'
+                      }`}
+                    >
+                      {copiedPlatform === 'tiktok' ? (
+                        <>
+                          <Check size={18} />
+                          <span>Copié!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={18} />
+                          <span>Copier</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="bg-black/30 rounded-2xl p-6 max-h-96 overflow-y-auto border border-white/5">
+                    <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans leading-relaxed">
+                      {generatedPosts.tiktok}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Bouton de configuration flottant - design premium */}
+          <button
+            onClick={() => setShowApiConfig(true)}
+            className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl shadow-2xl hover:shadow-purple-500/50 flex items-center justify-center hover:scale-110 transition-all duration-300 backdrop-blur-sm border border-white/20"
+            title="Configuration"
+          >
+            <span className="text-2xl">⚙️</span>
+          </button>
+
+          {/* Modal de configuration - même design épuré */}
+          {showApiConfig && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+                <h3 className="text-3xl font-light text-white mb-8 text-center">⚙️ Configuration</h3>
+
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-3">
+                        URL de votre API Vercel
+                      </label>
+                      <input
+                        type="text"
+                        value={apiUrl}
+                        onChange={(e) => setApiUrl(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 text-white rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        placeholder="https://votre-projet.vercel.app/api/generate-posts"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-3">
+                        Agent IA (Instructions pour ChatGPT)
+                      </label>
+                      <textarea
+                        value={agent}
+                        onChange={(e) => setAgent(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 text-white rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                        placeholder="Instructions pour personnaliser le comportement de l'IA..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-3">
+                        Corrections de noms (JSON)
+                      </label>
+                      <textarea
+                        value={nameCorrections}
+                        onChange={(e) => setNameCorrections(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 text-white rounded-xl border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                        placeholder='{"vegeta": "VEGETA", "goku": "GOKU"}'
+                      />
+                      <p className="text-xs text-gray-400 mt-2">
+                        Format: {'"input": "OUTPUT FORMATÉ"'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Templates en grille plus compacte */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-indigo-300 border-b border-indigo-500/30 pb-2">Discord</h4>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Titre</label>
+                        <input
+                          type="text"
+                          value={discordTitle}
+                          onChange={(e) => setDiscordTitle(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Template</label>
+                        <textarea
+                          value={discordTemplate}
+                          onChange={(e) => setDiscordTemplate(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500 h-24 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-pink-300 border-b border-pink-500/30 pb-2">Instagram</h4>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Titre</label>
+                        <input
+                          type="text"
+                          value={instagramTitle}
+                          onChange={(e) => setInstagramTitle(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Template</label>
+                        <textarea
+                          value={instagramTemplate}
+                          onChange={(e) => setInstagramTemplate(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500 h-24 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="text-lg font-semibold text-gray-300 border-b border-gray-500/30 pb-2">TikTok</h4>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Titre</label>
+                        <input
+                          type="text"
+                          value={tiktokTitle}
+                          onChange={(e) => setTiktokTitle(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-400 mb-2">Template</label>
+                        <textarea
+                          value={tiktokTemplate}
+                          onChange={(e) => setTiktokTemplate(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-1 focus:ring-purple-500 h-24 font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 mt-8 justify-center">
+                  <button
+                    onClick={saveConfig}
+                    className="px-8 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg"
+                  >
+                    💾 Sauvegarder
+                  </button>
+                  <button
+                    onClick={resetToDefaults}
+                    className="px-8 py-3 bg-red-500 text-white rounded-xl font-semibold hover:bg-red-600 transition-all shadow-lg"
+                  >
+                    🔄 Reset
+                  </button>
+                  <button
+                    onClick={() => setShowApiConfig(false)}
+                    className="px-8 py-3 bg-gray-600 text-white rounded-xl font-semibold hover:bg-gray-700 transition-all shadow-lg"
+                  >
+                    ❌ Fermer
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Message d'erreur */}
-        {error && (
-          <div className="bg-red-500/20 border border-red-500/50 text-red-200 rounded-xl p-4 mb-6 flex items-start gap-2">
-            <AlertCircle size={20} className="mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Posts générés */}
-        {generatedPosts.discord && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Discord */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-purple-500/50 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">D</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white">Discord</h3>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(generatedPosts.discord, 'discord')}
-                  className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
-                    copiedPlatform === 'discord'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  }`}
-                >
-                  {copiedPlatform === 'discord' ? (
-                    <>
-                      <Check size={16} />
-                      <span>Copié!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} />
-                      <span>Copier</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="bg-black/30 rounded-lg p-4 max-h-96 overflow-y-auto">
-                <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans">
-                  {generatedPosts.discord}
-                </pre>
-              </div>
-            </div>
-
-            {/* Instagram */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-pink-500/50 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">I</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white">Instagram</h3>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(generatedPosts.instagram, 'instagram')}
-                  className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
-                    copiedPlatform === 'instagram'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-600 text-white hover:opacity-90'
-                  }`}
-                >
-                  {copiedPlatform === 'instagram' ? (
-                    <>
-                      <Check size={16} />
-                      <span>Copié!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} />
-                      <span>Copier</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="bg-black/30 rounded-lg p-4 max-h-96 overflow-y-auto">
-                <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans">
-                  {generatedPosts.instagram}
-                </pre>
-              </div>
-            </div>
-
-            {/* TikTok */}
-            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-cyan-500/50 transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
-                    <span className="text-white font-bold text-sm">T</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-white">TikTok</h3>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(generatedPosts.tiktok, 'tiktok')}
-                  className={`px-4 py-2 rounded-lg transition-all flex items-center gap-2 ${
-                    copiedPlatform === 'tiktok'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-black text-white hover:bg-gray-900'
-                  }`}
-                >
-                  {copiedPlatform === 'tiktok' ? (
-                    <>
-                      <Check size={16} />
-                      <span>Copié!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} />
-                      <span>Copier</span>
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="bg-black/30 rounded-lg p-4 max-h-96 overflow-y-auto">
-                <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans">
-                  {generatedPosts.tiktok}
-                </pre>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Bouton de configuration flottant */}
-        <button
-          onClick={() => setShowApiConfig(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:shadow-purple-500/50 flex items-center justify-center hover:scale-110 transition-all"
-          title="Configuration"
-        >
-          ⚙️
-        </button>
-
-        {/* Modal de configuration */}
-        {showApiConfig && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-white/10">
-              <h3 className="text-2xl font-bold text-white mb-6">⚙️ Configuration</h3>
-
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      URL de votre API Vercel
-                    </label>
-                    <input
-                      type="text"
-                      value={apiUrl}
-                      onChange={(e) => setApiUrl(e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="https://votre-projet.vercel.app/api/generate-posts"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Agent IA (Instructions pour ChatGPT)
-                    </label>
-                    <textarea
-                      value={agent}
-                      onChange={(e) => setAgent(e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                      placeholder="Instructions pour personnaliser le comportement de l'IA..."
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Corrections de noms (JSON)
-                    </label>
-                    <textarea
-                      value={nameCorrections}
-                      onChange={(e) => setNameCorrections(e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                      placeholder='{"vegeta": "VEGETA", "goku": "GOKU"}'
-                    />
-                    <p className="text-xs text-gray-400 mt-1">
-                      Format: {'"input": "OUTPUT FORMATÉ"'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-white">Discord</h4>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Titre Discord
-                      </label>
-                      <input
-                        type="text"
-                        value={discordTitle}
-                        onChange={(e) => setDiscordTitle(e.target.value)}
-                        className="w-full px-4 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        placeholder="Ex: 🎨 **NOUVELLE FIGURINE** 🎨"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Template Discord
-                      </label>
-                      <textarea
-                        value={discordTemplate}
-                        onChange={(e) => setDiscordTemplate(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                        placeholder="Utilisez {title}, {name} et {message}"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Variables: {'{title}'}, {'{name}'}, {'{message}'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-white">Instagram</h4>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Titre Instagram
-                      </label>
-                      <input
-                        type="text"
-                        value={instagramTitle}
-                        onChange={(e) => setInstagramTitle(e.target.value)}
-                        className="w-full px-4 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        placeholder="Ex: ✨ NOUVEAUTÉ : {name} ✨"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Template Instagram
-                      </label>
-                      <textarea
-                        value={instagramTemplate}
-                        onChange={(e) => setInstagramTemplate(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                        placeholder="Utilisez {title}, {name} et {message}"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Variables: {'{title}'}, {'{name}'}, {'{message}'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-white">TikTok</h4>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Titre TikTok
-                      </label>
-                      <input
-                        type="text"
-                        value={tiktokTitle}
-                        onChange={(e) => setTiktokTitle(e.target.value)}
-                        className="w-full px-4 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                        placeholder="Ex: 🔥 DROP : {name} 🔥"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                        Template TikTok
-                      </label>
-                      <textarea
-                        value={tiktokTemplate}
-                        onChange={(e) => setTiktokTemplate(e.target.value)}
-                        className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                        placeholder="Utilisez {title}, {name} et {message}"
-                      />
-                      <p className="text-xs text-gray-400 mt-1">
-                        Variables: {'{title}'}, {'{name}'}, {'{message}'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={saveConfig}
-                  className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-bold hover:from-purple-700 hover:to-pink-700 transition-all"
-                >
-                  Sauvegarder
-                </button>
-                <button
-                  onClick={() => setShowApiConfig(false)}
-                  className="flex-1 px-4 py-3 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-600 transition-all"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
