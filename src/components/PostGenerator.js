@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Sparkles, Loader, Check, AlertCircle } from 'lucide-react';
-import BannerEditor from './BannerEditor';
+import FabricBannerEditor from './FabricBannerEditor';
 
 const PostGenerator = () => {
   const [figurineName, setFigurineName] = useState('');
@@ -492,7 +492,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
               Créez vos bannières d'annonce et Patreon avec glisser-déposer
             </p>
           </div>
-          <BannerEditor />
+          <FabricBannerEditor />
         </div>
 
         {/* Bouton de configuration flottant */}
