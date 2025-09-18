@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Sparkles, Loader, Check, AlertCircle } from 'lucide-react';
-import FabricBannerEditor from './FabricBannerEditor';
+import KonvaBannerEditor from './KonvaBannerEditor';
 
 const PostGenerator = () => {
   const [figurineName, setFigurineName] = useState('');
@@ -484,7 +484,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
 
         {/* Section Banner Editor */}
         <div className="mt-16">
-          <FabricBannerEditor />
+          <KonvaBannerEditor />
         </div>
 
         {/* Bouton de configuration flottant */}

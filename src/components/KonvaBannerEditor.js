@@ -43,7 +43,10 @@ const KonvaImageComponent = ({ src, x, y, isSelected, onSelect, onTransform }) =
   );
 };
 
-const KonvaTextComponent = ({ text, x, y, fontSize, fill, isSelected, onSelect, onTransform, onTextChange }) => {
+const KonvaTextComponent = ({
+  text, x, y, fontSize, fill, fontFamily, fontWeight, fontStyle,
+  align, letterSpacing, isSelected, onSelect, onTransform, onTextChange
+}) => {
   const shapeRef = useRef();
   const trRef = useRef();
 
@@ -61,8 +64,12 @@ const KonvaTextComponent = ({ text, x, y, fontSize, fill, isSelected, onSelect, 
         x={x}
         y={y}
         fontSize={fontSize}
-        fontFamily="Bebas Neue, Arial Black, sans-serif"
+        fontFamily={fontFamily || "Bebas Neue, Arial Black, sans-serif"}
+        fontStyle={fontStyle || 'normal'}
+        fontVariant={fontWeight || 'normal'}
         fill={fill}
+        align={align || 'left'}
+        letterSpacing={letterSpacing || 0}
         ref={shapeRef}
         draggable
         onClick={onSelect}
@@ -104,6 +111,10 @@ const KonvaBannerEditor = () => {
 
   const [objects, setObjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
+
+  // Propriétés de texte pour l'objet sélectionné
+  const selectedObject = objects.find(obj => obj.id === selectedId);
+  const isTextSelected = selectedObject && selectedObject.type === 'text';
 
   // Formats
   const formats = {
@@ -191,7 +202,12 @@ const KonvaBannerEditor = () => {
       x: displayWidth / 2,
       y: displayHeight / 2,
       fontSize: 40,
-      fill: '#ff6b35'
+      fill: '#ff6b35',
+      fontFamily: 'Bebas Neue, Arial Black, sans-serif',
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      align: 'center',
+      letterSpacing: 0
     };
     setObjects(prev => [...prev, newText]);
     setSelectedId(newText.id);
@@ -366,6 +382,131 @@ const KonvaBannerEditor = () => {
         </button>
       </div>
 
+      {/* Contrôles de texte */}
+      {isTextSelected && (
+        <div className="bg-black/20 rounded-2xl p-6 mb-6">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Type size={20} />
+            Propriétés du texte sélectionné
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Texte */}
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">Texte</label>
+              <input
+                type="text"
+                value={selectedObject.text || ''}
+                onChange={(e) => updateObject(selectedId, { text: e.target.value })}
+                className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            {/* Taille */}
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">
+                Taille: {selectedObject.fontSize || 40}px
+              </label>
+              <input
+                type="range"
+                min="12"
+                max="120"
+                value={selectedObject.fontSize || 40}
+                onChange={(e) => updateObject(selectedId, { fontSize: parseInt(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+
+            {/* Couleur */}
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">Couleur</label>
+              <input
+                type="color"
+                value={selectedObject.fill || '#ff6b35'}
+                onChange={(e) => updateObject(selectedId, { fill: e.target.value })}
+                className="w-full h-10 rounded-lg border-0 cursor-pointer"
+              />
+            </div>
+
+            {/* Police */}
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">Police</label>
+              <select
+                value={selectedObject.fontFamily || 'Bebas Neue, Arial Black, sans-serif'}
+                onChange={(e) => updateObject(selectedId, { fontFamily: e.target.value })}
+                className="w-full px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="Bebas Neue, Arial Black, sans-serif">Bebas Neue</option>
+                <option value="Arial Black, sans-serif">Arial Black</option>
+                <option value="Impact, sans-serif">Impact</option>
+                <option value="Times, serif">Times</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="Courier, monospace">Courier</option>
+                <option value="Comic Sans MS, cursive">Comic Sans</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            {/* Style de police */}
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">Style</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateObject(selectedId, { fontWeight: selectedObject.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                  className={`px-3 py-2 rounded-lg font-bold transition-all ${
+                    selectedObject.fontWeight === 'bold' ? 'bg-purple-600 text-white' : 'bg-gray-600 text-gray-300'
+                  }`}
+                >
+                  B
+                </button>
+                <button
+                  onClick={() => updateObject(selectedId, { fontStyle: selectedObject.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                  className={`px-3 py-2 rounded-lg italic transition-all ${
+                    selectedObject.fontStyle === 'italic' ? 'bg-purple-600 text-white' : 'bg-gray-600 text-gray-300'
+                  }`}
+                >
+                  I
+                </button>
+              </div>
+            </div>
+
+            {/* Alignement */}
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">Alignement</label>
+              <div className="flex gap-2">
+                {['left', 'center', 'right'].map(align => (
+                  <button
+                    key={align}
+                    onClick={() => updateObject(selectedId, { align })}
+                    className={`px-3 py-2 rounded-lg transition-all ${
+                      selectedObject.align === align ? 'bg-purple-600 text-white' : 'bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    {align === 'left' ? '⬅️' : align === 'center' ? '↔️' : '➡️'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Espacement */}
+            <div>
+              <label className="block text-sm text-gray-300 mb-2">
+                Espacement: {selectedObject.letterSpacing || 0}px
+              </label>
+              <input
+                type="range"
+                min="-5"
+                max="20"
+                value={selectedObject.letterSpacing || 0}
+                onChange={(e) => updateObject(selectedId, { letterSpacing: parseInt(e.target.value) })}
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Canvas */}
       <div className="flex justify-center items-center">
         <div className="relative">
@@ -457,6 +598,11 @@ const KonvaBannerEditor = () => {
                         y={obj.y}
                         fontSize={obj.fontSize}
                         fill={obj.fill}
+                        fontFamily={obj.fontFamily}
+                        fontWeight={obj.fontWeight}
+                        fontStyle={obj.fontStyle}
+                        align={obj.align}
+                        letterSpacing={obj.letterSpacing}
                         isSelected={selectedId === obj.id}
                         onSelect={() => setSelectedId(obj.id)}
                         onTextChange={(newText) => updateText(obj.id, newText)}
