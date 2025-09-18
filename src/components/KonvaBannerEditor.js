@@ -107,7 +107,8 @@ const KonvaBannerEditor = () => {
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [backgroundImage, setBackgroundImage] = useState(null);
   const [showLogo, setShowLogo] = useState(true);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.8);
+  const [canvasScale, setCanvasScale] = useState(1);
 
   const [objects, setObjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -127,9 +128,10 @@ const KonvaBannerEditor = () => {
   };
 
   const currentFormat = formats[selectedFormat];
-  const displayWidth = 400;
+  const baseDisplayWidth = 500;
+  const displayWidth = baseDisplayWidth * canvasScale;
   const displayHeight = (displayWidth * currentFormat.height) / currentFormat.width;
-  const scale = displayWidth / currentFormat.width;
+  const scale = (displayWidth / currentFormat.width) * zoom;
 
   // Initialiser avec logo si activé
   useEffect(() => {
@@ -260,9 +262,50 @@ const KonvaBannerEditor = () => {
     link.click();
   };
 
-  // Zoom
-  const zoomIn = () => setZoom(prev => Math.min(prev * 1.2, 3));
-  const zoomOut = () => setZoom(prev => Math.max(prev / 1.2, 0.5));
+  // Contrôles de zoom et taille
+  const handleWheel = (e) => {
+    e.evt.preventDefault();
+    const scaleBy = 1.1;
+    const stage = e.target.getStage();
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    let direction = e.evt.deltaY > 0 ? -1 : 1;
+    if (e.evt.ctrlKey) {
+      direction = -direction;
+    }
+
+    const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    const finalScale = Math.max(0.2, Math.min(newScale, 5));
+
+    stage.scale({ x: finalScale, y: finalScale });
+
+    const newPos = {
+      x: pointer.x - mousePointTo.x * finalScale,
+      y: pointer.y - mousePointTo.y * finalScale,
+    };
+    stage.position(newPos);
+    setZoom(finalScale);
+  };
+
+  const resetZoom = () => {
+    if (stageRef.current) {
+      stageRef.current.scale({ x: 1, y: 1 });
+      stageRef.current.position({ x: 0, y: 0 });
+      setZoom(1);
+    }
+  };
+
+  const fitToScreen = () => {
+    const containerScale = Math.min(1, 800 / displayWidth);
+    setCanvasScale(containerScale);
+    resetZoom();
+  };
 
   // Drag and drop sur le stage
   const handleDrop = (e) => {
@@ -507,34 +550,116 @@ const KonvaBannerEditor = () => {
         </div>
       )}
 
-      {/* Canvas */}
-      <div className="flex justify-center items-center">
-        <div className="relative">
-          {/* Zoom controls */}
-          <div className="absolute -left-16 top-1/2 transform -translate-y-1/2 flex flex-col gap-2 z-10">
-            <button
-              onClick={zoomIn}
-              className="w-10 h-10 bg-gray-700 text-white rounded-lg hover:bg-gray-600 flex items-center justify-center"
-            >
-              <ZoomIn size={16} />
-            </button>
-            <button
-              onClick={zoomOut}
-              className="w-10 h-10 bg-gray-700 text-white rounded-lg hover:bg-gray-600 flex items-center justify-center"
-            >
-              <ZoomOut size={16} />
-            </button>
+      {/* Contrôles de Canvas */}
+      <div className="bg-black/20 rounded-2xl p-6 mb-6">
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          🔧 Contrôles du Canvas
+        </h3>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Taille du canvas */}
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Taille Canvas: {Math.round(canvasScale * 100)}%
+            </label>
+            <input
+              type="range"
+              min="0.3"
+              max="2"
+              step="0.1"
+              value={canvasScale}
+              onChange={(e) => setCanvasScale(parseFloat(e.target.value))}
+              className="w-full"
+            />
           </div>
 
-          <div className="bg-white rounded-2xl p-4 shadow-2xl">
+          {/* Zoom */}
+          <div>
+            <label className="block text-sm text-gray-300 mb-2">
+              Zoom: {Math.round(zoom * 100)}%
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={resetZoom}
+                className="px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-500"
+              >
+                100%
+              </button>
+              <button
+                onClick={fitToScreen}
+                className="px-3 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-500"
+              >
+                Ajuster
+              </button>
+            </div>
+          </div>
+
+          {/* Info format */}
+          <div className="md:col-span-2">
+            <div className="text-sm text-gray-300">
+              <div>📐 Format: <span className="text-white font-mono">{currentFormat.width} × {currentFormat.height}px</span></div>
+              <div>🎯 Affichage: <span className="text-white font-mono">{Math.round(displayWidth)} × {Math.round(displayHeight)}px</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Canvas */}
+      <div className="flex justify-center">
+        <div className="relative bg-gray-800 p-8 rounded-2xl shadow-2xl overflow-auto max-w-full max-h-[80vh]"
+             style={{ minWidth: '600px', minHeight: '400px' }}>
+
+          {/* Règles et repères */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Règle horizontale */}
+            <div className="absolute top-0 left-8 right-8 h-6 bg-gray-700 border-b border-gray-500">
+              {Array.from({ length: Math.ceil(displayWidth / 50) }).map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute top-0 h-full border-l border-gray-500 text-xs text-gray-300 pl-1"
+                  style={{ left: i * 50 }}
+                >
+                  {i * 50 > 0 && <span className="text-[10px]">{i * 50}</span>}
+                </div>
+              ))}
+            </div>
+
+            {/* Règle verticale */}
+            <div className="absolute top-8 bottom-0 left-0 w-6 bg-gray-700 border-r border-gray-500">
+              {Array.from({ length: Math.ceil(displayHeight / 50) }).map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute left-0 w-full border-t border-gray-500 text-xs text-gray-300"
+                  style={{ top: i * 50 }}
+                >
+                  {i * 50 > 0 && (
+                    <span className="text-[10px] transform -rotate-90 block w-4 h-4 text-center">{i * 50}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Indicateur de format */}
+            <div className="absolute top-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs font-mono">
+              {selectedFormat} • {Math.round(zoom * 100)}%
+            </div>
+          </div>
+
+          <div
+            className="bg-white rounded-lg shadow-inner border-2 border-dashed border-gray-400 relative overflow-hidden"
+            style={{
+              width: displayWidth,
+              height: displayHeight,
+              marginLeft: '24px',
+              marginTop: '24px'
+            }}
+          >
             <Stage
               width={displayWidth}
               height={displayHeight}
-              scaleX={zoom}
-              scaleY={zoom}
               ref={stageRef}
+              onWheel={handleWheel}
               onMouseDown={(e) => {
-                // Déselectionner si on clique sur le background
                 const clickedOnEmpty = e.target === e.target.getStage();
                 if (clickedOnEmpty) {
                   setSelectedId(null);
@@ -629,9 +754,9 @@ const KonvaBannerEditor = () => {
         </div>
       </div>
 
-      {/* Format info */}
+      {/* Instructions */}
       <div className="text-center mt-4 text-gray-400 text-sm">
-        Format : {currentFormat.width} × {currentFormat.height} pixels • Zoom: {Math.round(zoom * 100)}%
+        🖱️ <strong>Zoom:</strong> Molette de la souris • <strong>Pan:</strong> Cliquez-glissez • <strong>Reset:</strong> Bouton 100%
       </div>
 
       {/* Hidden inputs */}
