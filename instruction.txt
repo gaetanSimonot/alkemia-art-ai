@@ -1,0 +1,126 @@
+nouvelle page sur mon site : 
+
+Je veux intégrer une app de prise de notes vocales avec Mind Map interactive dans mon site existant. Voici les spécifications complètes :
+
+## FONCTIONNALITÉS PRINCIPALES :
+
+### 🧠 Interface Mind Map Interactive
+- Hub central avec micro pour enregistrement
+- Catégories sous forme de bulles colorées connectées
+- Drag & drop fluide : viewport (clic-glisser fond) + bulles individuelles
+- Zoom/dézoom avec molette vers position souris
+- Connexions visuelles animées entre catégories liées
+
+### 📱 Modes d'affichage intelligents
+- Vue Mind Map : bulles en cercle, tailles selon importance/nombre
+- Vue Liste : automatique pour tri alphabétique/récent, tailles uniformes
+- Filtres : Importance, Nombre de fichiers, Alphabétique, Récent
+- Contrôle taille globale avec slider
+
+### 🎤 Système de notes multimodal
+- Note vocale : Web Audio API + Speech-to-Text + correction ChatGPT
+- Note texte : saisie rapide clavier
+- Photo : upload fichier + capture caméra mobile
+- Sélection obligatoire catégorie avant ajout
+- Notifications visuelles au centre
+
+### 🎨 Design moderne
+- Thèmes : Dark, Ocean, Sunset, Forest
+- Effets glassmorphisme et dégradés
+- Animations fluides (pulse, scale, flow)
+- Interface responsive mobile/desktop
+- Contrôles intuitifs avec icônes
+
+## ARCHITECTURE TECHNIQUE :
+
+### 📁 Structure fichiers
+
+Je veux intégrer une app de prise de notes vocales avec Mind Map interactive dans mon site existant. Voici les spécifications complètes :
+
+## FONCTIONNALITÉS PRINCIPALES :
+
+### 🧠 Interface Mind Map Interactive
+- Hub central avec micro pour enregistrement
+- Catégories sous forme de bulles colorées connectées
+- Drag & drop fluide : viewport (clic-glisser fond) + bulles individuelles
+- Zoom/dézoom avec molette vers position souris
+- Connexions visuelles animées entre catégories liées
+
+### 📱 Modes d'affichage intelligents
+- Vue Mind Map : bulles en cercle, tailles selon importance/nombre
+- Vue Liste : automatique pour tri alphabétique/récent, tailles uniformes
+- Filtres : Importance, Nombre de fichiers, Alphabétique, Récent
+- Contrôle taille globale avec slider
+
+### 🎤 Système de notes multimodal
+- Note vocale : Web Audio API + Speech-to-Text + correction ChatGPT
+- Note texte : saisie rapide clavier
+- Photo : upload fichier + capture caméra mobile
+- Sélection obligatoire catégorie avant ajout
+- Notifications visuelles au centre
+
+### 🎨 Design moderne
+- Thèmes : Dark, Ocean, Sunset, Forest
+- Effets glassmorphisme et dégradés
+- Animations fluides (pulse, scale, flow)
+- Interface responsive mobile/desktop
+- Contrôles intuitifs avec icônes
+
+## ARCHITECTURE TECHNIQUE :
+
+### 📁 Structure fichiers
+### 🛠️ Technologies à utiliser
+- HTML5 Canvas pour performances
+- Web Audio API pour enregistrement
+- IndexedDB pour stockage local
+- Fabric.js ou Konva.js pour interactions canvas
+- ChatGPT API pour correction syntaxique
+- Gmail API pour envoi brouillons
+- Responsive design mobile-first
+
+## FONCTIONNALITÉS AVANCÉES :
+
+### 💾 Système de sauvegarde
+- Auto-save local toutes les 30 secondes
+- Export JSON complet
+- Backup Google Drive 1-clic
+- Import/Export projets
+
+### 📧 Intégration email
+- Envoi automatique en brouillons Gmail
+- Templates formatés markdown
+- Pièces jointes (audio + images)
+
+### 🔗 Connexions intelligentes
+- Drag & drop pour créer liens
+- Suggestions basées contenu
+- Navigation par connexions
+
+## INTERFACE UTILISATEUR :
+
+### 🎛️ Contrôles (sidebar gauche)
+- Sélecteur format/thème
+- Filtres tri avec preview
+- Slider taille globale
+- Toggle connexions
+
+### 🎯 Boutons action (bas écran)
+- 📝 Note texte (bleu)
+- 🎤 Note vocale (rouge, plus gros, avec animation pulse)
+- 📷 Photo (vert, avec input file caché)
+
+### 📊 Panel info (droite)
+- Détails catégorie sélectionnée
+- Statistiques (notes, connexions)
+- Actions rapides (éditer, supprimer)
+
+## DONNÉES EXEMPLE :
+Commence avec 8-10 catégories pré-remplies (Travail 💼, Personnel 🏠, Idées 💡, Projets 🚀, Famille 👨‍👩‍👧‍👦, Santé 🏃‍♀️, Créatif 🎨, Réunions 👥) avec des connexions logiques entre elles.
+
+## PERFORMANCE :
+- Optimisé 60fps
+- Lazy loading images
+- Debounced search
+- Smooth animations CSS/JS
+
+Crée une page complète, moderne et professionnelle qui s'intègre parfaitement dans mon site existant. Fais-moi également un serveur de développement local pour tester en temps réel.
