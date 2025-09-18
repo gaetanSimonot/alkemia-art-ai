@@ -292,7 +292,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-black p-4 md:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -308,7 +308,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
         </div>
 
         {/* Barre de recherche */}
-        <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-6 mb-6 border border-white/5">
+        <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 mb-6 border border-white/10">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <input
@@ -317,21 +317,21 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
                 value={figurineName}
                 onChange={(e) => setFigurineName(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="w-full px-5 py-4 rounded-xl bg-black/40 text-white placeholder-gray-500 border border-white/10 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
+                className="w-full px-5 py-4 rounded-xl bg-black/30 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
               />
             </div>
             <div className="flex gap-3">
               <button
                 onClick={previewPosts}
                 disabled={!figurineName.trim()}
-                className="px-6 py-4 bg-gray-800 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-all flex items-center justify-center gap-2 text-lg"
+                className="px-6 py-4 bg-gray-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-all flex items-center justify-center gap-2 text-lg"
               >
                 👁️ <span>Aperçu</span>
               </button>
               <button
                 onClick={generatePosts}
                 disabled={isGenerating || !figurineName.trim()}
-                className="px-8 py-4 bg-gradient-to-r from-purple-700 to-pink-700 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-800 hover:to-pink-800 transition-all flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-purple-500/25"
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-700 hover:to-pink-700 transition-all flex items-center justify-center gap-2 text-lg shadow-lg hover:shadow-purple-500/25"
               >
                 {isGenerating ? (
                   <>
@@ -369,7 +369,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
         {generatedPosts.discord && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Discord */}
-            <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/5 hover:border-purple-500/30 transition-all">
+            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-purple-500/50 transition-all">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -398,7 +398,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
                   )}
                 </button>
               </div>
-              <div className="bg-black/50 rounded-lg p-4 max-h-96 overflow-y-auto border border-black/30">
+              <div className="bg-black/30 rounded-lg p-4 max-h-96 overflow-y-auto">
                 <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans">
                   {generatedPosts.discord}
                 </pre>
@@ -406,7 +406,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
             </div>
 
             {/* Instagram */}
-            <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/5 hover:border-pink-500/30 transition-all">
+            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-pink-500/50 transition-all">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -435,7 +435,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
                   )}
                 </button>
               </div>
-              <div className="bg-black/50 rounded-lg p-4 max-h-96 overflow-y-auto border border-black/30">
+              <div className="bg-black/30 rounded-lg p-4 max-h-96 overflow-y-auto">
                 <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans">
                   {generatedPosts.instagram}
                 </pre>
@@ -443,7 +443,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
             </div>
 
             {/* TikTok */}
-            <div className="bg-black/20 backdrop-blur-lg rounded-2xl p-6 border border-white/5 hover:border-gray-500/30 transition-all">
+            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-cyan-500/50 transition-all">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center">
@@ -472,7 +472,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
                   )}
                 </button>
               </div>
-              <div className="bg-black/50 rounded-lg p-4 max-h-96 overflow-y-auto border border-black/30">
+              <div className="bg-black/30 rounded-lg p-4 max-h-96 overflow-y-auto">
                 <pre className="text-gray-200 text-sm whitespace-pre-wrap font-sans">
                   {generatedPosts.tiktok}
                 </pre>
@@ -484,7 +484,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
         {/* Bouton de configuration flottant */}
         <button
           onClick={() => setShowApiConfig(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-800 to-pink-800 text-white rounded-full shadow-lg hover:shadow-purple-500/50 flex items-center justify-center hover:scale-110 transition-all border border-white/10"
+          className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full shadow-lg hover:shadow-purple-500/50 flex items-center justify-center hover:scale-110 transition-all"
           title="Configuration"
         >
           ⚙️
