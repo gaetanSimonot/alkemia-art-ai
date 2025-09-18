@@ -31,8 +31,9 @@ Pour TikTok: Ultra court, viral, jeune et dynamique
 
 Sois créatif et montre que tu connais vraiment le personnage !`);
 
-  // Templates personnalisables
-  const [discordTemplate, setDiscordTemplate] = useState(localStorage.getItem('discordTemplate') || `🎨 **NOUVELLE FIGURINE STL DISPONIBLE** 🎨
+  // Templates personnalisables avec titres séparés
+  const [discordTitle, setDiscordTitle] = useState(localStorage.getItem('discordTitle') || '🎨 **NOUVELLE FIGURINE STL DISPONIBLE** 🎨');
+  const [discordTemplate, setDiscordTemplate] = useState(localStorage.getItem('discordTemplate') || `{title}
 
 📦 **{name}** débarque dans la librairie !
 
@@ -47,7 +48,8 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
 
 #AlkemiaArt #3DPrinting #STL`);
 
-  const [instagramTemplate, setInstagramTemplate] = useState(localStorage.getItem('instagramTemplate') || `✨ NOUVEAUTÉ : {name} ✨
+  const [instagramTitle, setInstagramTitle] = useState(localStorage.getItem('instagramTitle') || '✨ NOUVEAUTÉ : {name} ✨');
+  const [instagramTemplate, setInstagramTemplate] = useState(localStorage.getItem('instagramTemplate') || `{title}
 
 {message}
 
@@ -61,7 +63,8 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
 #MiniaturePainting #3DPrintedMiniatures #3DDesign
 #PrintableMiniatures #TabletopGaming #3DPrintingCommunity`);
 
-  const [tiktokTemplate, setTiktokTemplate] = useState(localStorage.getItem('tiktokTemplate') || `🔥 DROP : {name} 🔥
+  const [tiktokTitle, setTiktokTitle] = useState(localStorage.getItem('tiktokTitle') || '🔥 DROP : {name} 🔥');
+  const [tiktokTemplate, setTiktokTemplate] = useState(localStorage.getItem('tiktokTemplate') || `{title}
 
 {message}
 
@@ -83,8 +86,11 @@ Sois créatif et montre que tu connais vraiment le personnage !`);
   const saveConfig = () => {
     localStorage.setItem('apiUrl', apiUrl);
     localStorage.setItem('agent', agent);
+    localStorage.setItem('discordTitle', discordTitle);
     localStorage.setItem('discordTemplate', discordTemplate);
+    localStorage.setItem('instagramTitle', instagramTitle);
     localStorage.setItem('instagramTemplate', instagramTemplate);
+    localStorage.setItem('tiktokTitle', tiktokTitle);
     localStorage.setItem('tiktokTemplate', tiktokTemplate);
     setShowApiConfig(false);
     setError('');
@@ -159,19 +165,31 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
   };
 
   const formatDiscordPost = (name, message) => {
+    const title = discordTitle
+      .replace(/{name}/g, name || 'Personnage');
+
     return discordTemplate
+      .replace(/{title}/g, title)
       .replace(/{name}/g, name || 'Personnage')
       .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
   const formatInstagramPost = (name, message) => {
+    const title = instagramTitle
+      .replace(/{name}/g, name || 'Personnage');
+
     return instagramTemplate
+      .replace(/{title}/g, title)
       .replace(/{name}/g, name || 'Personnage')
       .replace(/{message}/g, message || 'Message personnalisé ici');
   };
 
   const formatTikTokPost = (name, message) => {
+    const title = tiktokTitle
+      .replace(/{name}/g, name || 'Personnage');
+
     return tiktokTemplate
+      .replace(/{title}/g, title)
       .replace(/{name}/g, name || 'Personnage')
       .replace(/{message}/g, message || 'Message personnalisé ici');
   };
@@ -199,7 +217,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <img src="/logo.png" alt="Alkemia Art" className="w-12 h-12" />
+            <img src="/logo.png?v=2" alt="Alkemia Art" className="w-12 h-12 object-contain" />
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent">
               Alkemia Art Tool
             </h1>
@@ -418,49 +436,94 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Template Discord
-                    </label>
-                    <textarea
-                      value={discordTemplate}
-                      onChange={(e) => setDiscordTemplate(e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                      placeholder="Utilisez {name} et {message}"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">
-                      Variables: {'{name}'} {'{message}'}
-                    </p>
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-white">Discord</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Titre Discord
+                      </label>
+                      <input
+                        type="text"
+                        value={discordTitle}
+                        onChange={(e) => setDiscordTitle(e.target.value)}
+                        className="w-full px-4 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        placeholder="Ex: 🎨 **NOUVELLE FIGURINE** 🎨"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Template Discord
+                      </label>
+                      <textarea
+                        value={discordTemplate}
+                        onChange={(e) => setDiscordTemplate(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                        placeholder="Utilisez {title}, {name} et {message}"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Variables: {'{title}'}, {'{name}'}, {'{message}'}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Template Instagram
-                    </label>
-                    <textarea
-                      value={instagramTemplate}
-                      onChange={(e) => setInstagramTemplate(e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                      placeholder="Utilisez {name} et {message}"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">
-                      Variables: {'{name}'} {'{message}'}
-                    </p>
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-white">Instagram</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Titre Instagram
+                      </label>
+                      <input
+                        type="text"
+                        value={instagramTitle}
+                        onChange={(e) => setInstagramTitle(e.target.value)}
+                        className="w-full px-4 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        placeholder="Ex: ✨ NOUVEAUTÉ : {name} ✨"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Template Instagram
+                      </label>
+                      <textarea
+                        value={instagramTemplate}
+                        onChange={(e) => setInstagramTemplate(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                        placeholder="Utilisez {title}, {name} et {message}"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Variables: {'{title}'}, {'{name}'}, {'{message}'}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Template TikTok
-                    </label>
-                    <textarea
-                      value={tiktokTemplate}
-                      onChange={(e) => setTiktokTemplate(e.target.value)}
-                      className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
-                      placeholder="Utilisez {name} et {message}"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">
-                      Variables: {'{name}'} {'{message}'}
-                    </p>
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-white">TikTok</h4>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Titre TikTok
+                      </label>
+                      <input
+                        type="text"
+                        value={tiktokTitle}
+                        onChange={(e) => setTiktokTitle(e.target.value)}
+                        className="w-full px-4 py-2 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        placeholder="Ex: 🔥 DROP : {name} 🔥"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Template TikTok
+                      </label>
+                      <textarea
+                        value={tiktokTemplate}
+                        onChange={(e) => setTiktokTemplate(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/30 text-white rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-purple-500 h-32 font-mono text-sm"
+                        placeholder="Utilisez {title}, {name} et {message}"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Variables: {'{title}'}, {'{name}'}, {'{message}'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
