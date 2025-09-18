@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Sparkles, Loader, Check, AlertCircle } from 'lucide-react';
+import BannerEditor from './BannerEditor';
 
 const PostGenerator = () => {
   const [figurineName, setFigurineName] = useState('');
@@ -480,6 +481,19 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
             </div>
           </div>
         )}
+
+        {/* Section Banner Editor */}
+        <div className="mt-16">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-orange-400 via-red-400 to-pink-400 bg-clip-text text-transparent mb-3">
+              🎨 Éditeur de Bannières
+            </h2>
+            <p className="text-gray-300 text-sm md:text-base">
+              Créez vos bannières d'annonce et Patreon avec glisser-déposer
+            </p>
+          </div>
+          <BannerEditor />
+        </div>
 
         {/* Bouton de configuration flottant */}
         <button
