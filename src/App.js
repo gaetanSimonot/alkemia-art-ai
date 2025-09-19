@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Brain, Palette, Home } from 'lucide-react';
 import PostGenerator from './components/PostGenerator';
 import MindMapNotes from './components/MindMapNotes';
+import BallTestReact from './components/BallTestReact';
 
 function App() {
   return (
@@ -59,6 +60,7 @@ function App() {
           <Route path="/" element={<PostGenerator />} />
           <Route path="/mindmap" element={<MindMapNotes />} />
           <Route path="/banner-editor" element={<PostGenerator />} />
+          <Route path="/ball-test" element={<BallTestReact />} />
         </Routes>
       </div>
     </Router>

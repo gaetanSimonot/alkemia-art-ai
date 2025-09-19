@@ -10,7 +10,9 @@
       "Bash(git push:*)",
       "Bash(npm run build:*)",
       "Bash(npm install:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(npx kill-port:*)",
+      "Bash(set FAST_REFRESH=false)"
     ],
     "deny": [],
     "ask": []

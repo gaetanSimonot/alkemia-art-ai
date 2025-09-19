@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Stage, Layer, Circle, Text, Group } from 'react-konva';
 import {
   Mic, MicOff, Type, Image as ImageIcon,
-  Edit3, List, Grid
+  Edit3, List, Grid, Plus, X, Folder, File
 } from 'lucide-react';
 import RichNoteEditor from './RichNoteEditor';
 
@@ -26,18 +25,16 @@ const MindMapNotes = () => {
   const [showCreateFolder, setShowCreateFolder] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState({});
 
-  // États pour la navigation canvas
-  const [scale, setScale] = useState(1);
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
+  // États pour le drag HTML/CSS - SIMPLE et EFFICACE
   const [ballPositions, setBallPositions] = useState({});
-  const [isDragging, setIsDragging] = useState(false);
+  const [draggedBall, setDraggedBall] = useState(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
 
   // Refs
-  const stageRef = useRef();
+  const containerRef = useRef();
   const mediaRecorderRef = useRef();
   const audioChunksRef = useRef([]);
-  const containerRef = useRef();
 
   // Thèmes
   const themes = useMemo(() => ({
@@ -107,33 +104,137 @@ const MindMapNotes = () => {
       importance: 4,
       color: '#06d6a0',
       notes: [
-        { id: 3, type: 'photo', title: 'Courses', content: 'Photo liste courses', timestamp: Date.now() - 129600000, folderId: null },
-        { id: 4, type: 'text', title: 'Anniversaire', content: 'Anniversaire maman le 15', timestamp: Date.now() - 216000000, folderId: null }
+        { id: 3, type: 'text', title: 'Courses', content: 'Lait, pain, œufs', timestamp: Date.now() - 21600000, folderId: null },
+        { id: 4, type: 'voice', title: 'Médecin', content: 'RDV médecin mardi', timestamp: Date.now() - 10800000, folderId: 'folder-3' }
       ],
-      folders: []
+      folders: [
+        { id: 'folder-3', name: 'Santé', color: '#ff8844' }
+      ]
     },
     {
       id: 'ideas',
       emoji: '💡',
       name: 'Idées',
-      importance: 5,
+      importance: 3,
       color: '#f59e0b',
       notes: [
-        { id: 5, type: 'voice', title: 'App mobile', content: 'Idée app mobile pour les courses', timestamp: Date.now() - 302400000, folderId: null },
-        { id: 6, type: 'text', title: 'Blog article', content: 'Article sur la productivité', timestamp: Date.now() - 388800000, folderId: null }
+        { id: 5, type: 'text', title: 'App mobile', content: 'Idée app pour notes vocales', timestamp: Date.now() - 5400000, folderId: null },
+        { id: 6, type: 'voice', title: 'Innovation', content: 'Nouveau concept IA', timestamp: Date.now() - 7200000, folderId: null }
+      ],
+      folders: []
+    },
+    {
+      id: 'projects',
+      emoji: '🚀',
+      name: 'Projets',
+      importance: 4,
+      color: '#ec4899',
+      notes: [
+        { id: 7, type: 'text', title: 'Site web', content: 'Nouveau portfolio', timestamp: Date.now() - 14400000, folderId: null }
+      ],
+      folders: []
+    },
+    {
+      id: 'family',
+      emoji: '👨‍👩‍👧‍👦',
+      name: 'Famille',
+      importance: 5,
+      color: '#8b5cf6',
+      notes: [
+        { id: 8, type: 'voice', title: 'Anniversaire', content: 'Anniversaire maman le 15', timestamp: Date.now() - 3600000, folderId: null }
       ],
       folders: []
     }
   ], []);
 
-  // Initialisation
-  useEffect(() => {
-    const saved = localStorage.getItem('mindmap-categories');
-    const savedPositions = localStorage.getItem('mindmap-positions');
-    const savedExpanded = localStorage.getItem('mindmap-folders-expanded');
+  // Calcul position par défaut pour les boules
+  const getDefaultPosition = useCallback((categoryId, index) => {
+    if (!containerRef.current) return { x: 150 + index * 200, y: 150 };
 
-    if (saved) {
-      setCategories(JSON.parse(saved));
+    const container = containerRef.current;
+    const centerX = container.offsetWidth / 2;
+    const centerY = container.offsetHeight / 2;
+    const radius = Math.min(container.offsetWidth, container.offsetHeight) * 0.25;
+
+    const angle = (index * 2 * Math.PI) / categories.length;
+    return {
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius
+    };
+  }, [categories.length]);
+
+  // Gestion du drag HTML/CSS - SYSTÈME SIMPLE QUI MARCHE
+  const handleBallMouseDown = useCallback((e, categoryId) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const categoryIndex = categories.findIndex(c => c.id === categoryId);
+    const currentPos = ballPositions[categoryId] || getDefaultPosition(categoryId, categoryIndex);
+
+    setDraggedBall(categoryId);
+    setSelectedCategory(categoryId);
+    setDragOffset({
+      x: mouseX - currentPos.x,
+      y: mouseY - currentPos.y
+    });
+  }, [categories, ballPositions, getDefaultPosition]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!draggedBall) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const newX = mouseX - dragOffset.x;
+    const newY = mouseY - dragOffset.y;
+
+    // Contraintes pour rester dans le container
+    const ballSize = 80;
+    const constrainedX = Math.max(ballSize/2, Math.min(newX, rect.width - ballSize/2));
+    const constrainedY = Math.max(ballSize/2, Math.min(newY, rect.height - ballSize/2));
+
+    setBallPositions(prev => ({
+      ...prev,
+      [draggedBall]: { x: constrainedX, y: constrainedY }
+    }));
+  }, [draggedBall, dragOffset]);
+
+  const handleMouseUp = useCallback(() => {
+    if (draggedBall) {
+      setDraggedBall(null);
+      // Sauvegarder positions dans localStorage
+      const positions = { ...ballPositions };
+      if (ballPositions[draggedBall]) {
+        localStorage.setItem('mindmap-ball-positions', JSON.stringify(positions));
+      }
+    }
+  }, [draggedBall, ballPositions]);
+
+  // Event listeners globaux pour le drag
+  useEffect(() => {
+    if (draggedBall) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [draggedBall, handleMouseMove, handleMouseUp]);
+
+  // Charger positions et données au démarrage
+  useEffect(() => {
+    const savedCategories = localStorage.getItem('mindmap-categories');
+    const savedPositions = localStorage.getItem('mindmap-ball-positions');
+
+    if (savedCategories) {
+      setCategories(JSON.parse(savedCategories));
     } else {
       setCategories(initialCategories);
     }
@@ -141,785 +242,369 @@ const MindMapNotes = () => {
     if (savedPositions) {
       setBallPositions(JSON.parse(savedPositions));
     }
+  }, [initialCategories]);
 
-    if (savedExpanded) {
-      setExpandedFolders(JSON.parse(savedExpanded));
-    }
-
-    const updateStageSize = () => {
+  // Observer la taille du container
+  useEffect(() => {
+    const updateSize = () => {
       if (containerRef.current) {
-        setStageSize({
+        setContainerSize({
           width: containerRef.current.offsetWidth,
           height: containerRef.current.offsetHeight
         });
       }
     };
 
-    updateStageSize();
-    window.addEventListener('resize', updateStageSize);
-    return () => window.removeEventListener('resize', updateStageSize);
-  }, [initialCategories]);
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
 
-  // Sauvegarde
-  useEffect(() => {
-    if (categories.length > 0) {
-      localStorage.setItem('mindmap-categories', JSON.stringify(categories));
-    }
+  // Fonctions utilitaires
+  const saveData = useCallback(() => {
+    localStorage.setItem('mindmap-categories', JSON.stringify(categories));
   }, [categories]);
 
-  useEffect(() => {
-    if (Object.keys(ballPositions).length > 0) {
-      localStorage.setItem('mindmap-positions', JSON.stringify(ballPositions));
-    }
-  }, [ballPositions]);
-
-  useEffect(() => {
-    localStorage.setItem('mindmap-folders-expanded', JSON.stringify(expandedFolders));
-  }, [expandedFolders]);
-
-  // Calcul des positions par défaut SEULEMENT pour les nouvelles boules
-  const getDefaultPosition = (categoryId, index) => {
-    const centerX = stageSize.width / 2;
-    const centerY = stageSize.height / 2;
-    const radius = Math.min(stageSize.width, stageSize.height) * 0.3;
-    const totalCategories = categories.length;
-
-    if (viewMode === 'list') {
-      return { x: centerX, y: 100 + index * 120 };
-    }
-
-    const angle = (index * 2 * Math.PI) / totalCategories;
-    return {
-      x: centerX + Math.cos(angle) * radius,
-      y: centerY + Math.sin(angle) * radius
-    };
-  };
-
-  // Positions finales des boules
-  const finalBallPositions = useMemo(() => {
-    const positions = {};
-
-    categories.forEach((category, index) => {
-      if (ballPositions[category.id]) {
-        // Position sauvegardée
-        positions[category.id] = ballPositions[category.id];
-      } else {
-        // Position par défaut
-        positions[category.id] = getDefaultPosition(category.id, index);
-      }
-    });
-
-    return positions;
-  }, [categories, ballPositions, stageSize, viewMode]);
-
-  // Gestion du drag des boules - SIMPLE et DIRECTE
-  const handleBallDragEnd = (categoryId, e) => {
-    setBallPositions(prev => ({
-      ...prev,
-      [categoryId]: {
-        x: e.target.x(),
-        y: e.target.y()
-      }
-    }));
-  };
-
-  // Gestion zoom - SANS interférer avec les positions des boules
-  const handleWheel = useCallback((e) => {
-    if (isDragging) return; // Pas de zoom pendant le drag
-
-    e.evt.preventDefault();
-    const scaleBy = 1.05;
-    const stage = e.target.getStage();
-    const oldScale = stage.scaleX();
-    const pointer = stage.getPointerPosition();
-
-    const mousePointTo = {
-      x: (pointer.x - stage.x()) / oldScale,
-      y: (pointer.y - stage.y()) / oldScale,
-    };
-
-    const newScale = e.evt.deltaY > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-    const clampedScale = Math.max(0.3, Math.min(3, newScale));
-
-    setScale(clampedScale);
-
-    const newPos = {
-      x: pointer.x - mousePointTo.x * clampedScale,
-      y: pointer.y - mousePointTo.y * clampedScale,
-    };
-    setPanOffset(newPos);
-  }, [isDragging]);
-
-  // Notifications
   const showNotification = useCallback((message, type = 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
   }, []);
 
-  // Fonctions de gestion des notes et dossiers
-  const addNoteToCategory = useCallback((categoryId, type, title, content, folderId = null) => {
-    setCategories(prev => prev.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          notes: [
-            {
-              id: Date.now(),
-              type,
-              title,
-              content,
-              timestamp: Date.now(),
-              folderId
-            },
-            ...cat.notes
-          ]
-        };
-      }
-      return cat;
-    }));
-  }, []);
+  const addNote = useCallback((categoryId, note) => {
+    setCategories(prev => prev.map(cat =>
+      cat.id === categoryId
+        ? { ...cat, notes: [...cat.notes, { ...note, id: Date.now() }] }
+        : cat
+    ));
+    showNotification('Note ajoutée !', 'success');
+  }, [showNotification]);
 
-  const createFolder = (categoryId, folderName) => {
+  const deleteNote = useCallback((categoryId, noteId) => {
+    setCategories(prev => prev.map(cat =>
+      cat.id === categoryId
+        ? { ...cat, notes: cat.notes.filter(note => note.id !== noteId) }
+        : cat
+    ));
+    showNotification('Note supprimée !', 'success');
+  }, [showNotification]);
+
+  const addFolder = useCallback((categoryId) => {
+    if (!newFolderName.trim()) return;
+
     const newFolder = {
       id: `folder-${Date.now()}`,
-      name: folderName,
-      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+      name: newFolderName,
+      color: themes[currentTheme].accent
     };
 
-    setCategories(prev => prev.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          folders: [...(cat.folders || []), newFolder]
-        };
-      }
-      return cat;
-    }));
+    setCategories(prev => prev.map(cat =>
+      cat.id === categoryId
+        ? { ...cat, folders: [...cat.folders, newFolder] }
+        : cat
+    ));
 
-    showNotification('Dossier créé!', 'success');
-  };
-
-  const moveNoteToFolder = (categoryId, noteId, folderId) => {
-    setCategories(prev => prev.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          notes: cat.notes.map(note =>
-            note.id === noteId ? { ...note, folderId } : note
-          )
-        };
-      }
-      return cat;
-    }));
-  };
-
-  const moveNoteToCategoryFromDrag = (noteId, sourceCategoryId, targetCategoryId) => {
-    let noteToMove = null;
-
-    // Trouver et supprimer la note de la catégorie source
-    setCategories(prev => prev.map(cat => {
-      if (cat.id === sourceCategoryId) {
-        const note = cat.notes.find(n => n.id === noteId);
-        if (note) {
-          noteToMove = { ...note, folderId: null }; // Reset folder when moving
-          return {
-            ...cat,
-            notes: cat.notes.filter(n => n.id !== noteId)
-          };
-        }
-      }
-      return cat;
-    }));
-
-    // Ajouter la note à la catégorie cible
-    if (noteToMove) {
-      setTimeout(() => {
-        setCategories(prev => prev.map(cat => {
-          if (cat.id === targetCategoryId) {
-            return {
-              ...cat,
-              notes: [noteToMove, ...cat.notes]
-            };
-          }
-          return cat;
-        }));
-        showNotification('Note déplacée vers ' + targetCategoryId, 'success');
-      }, 100);
-    }
-  };
-
-  // Fonctions d'enregistrement
-  const startRecording = async () => {
-    if (!selectedCategory) {
-      showNotification('Sélectionnez d\'abord une catégorie', 'error');
-      return;
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-        const mockTranscription = 'Note vocale transcrite automatiquement';
-        addNoteToCategory(selectedCategory, 'voice', 'Note vocale', mockTranscription);
-        showNotification('Note vocale ajoutée avec succès!', 'success');
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      showNotification('Enregistrement en cours...', 'info');
-    } catch (error) {
-      showNotification('Erreur d\'accès au microphone', 'error');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      setIsRecording(false);
-    }
-  };
-
-  const addTextNote = () => {
-    if (!selectedCategory) {
-      showNotification('Sélectionnez d\'abord une catégorie', 'error');
-      return;
-    }
-    setShowTextModal(true);
-  };
-
-  const saveTextNote = () => {
-    if (textInput.trim()) {
-      const title = textInput.split('\n')[0].substring(0, 30) + (textInput.length > 30 ? '...' : '');
-      addNoteToCategory(selectedCategory, 'text', title, textInput);
-      setTextInput('');
-      setShowTextModal(false);
-      showNotification('Note texte ajoutée!', 'success');
-    }
-  };
-
-  const openRichEditor = (note = null) => {
-    setEditingNote(note);
-    setShowRichEditor(true);
-  };
-
-  const saveRichNote = (noteData) => {
-    if (editingNote) {
-      setCategories(prev => prev.map(cat => ({
-        ...cat,
-        notes: cat.notes.map(note =>
-          note.id === editingNote.id ? { ...noteData, id: editingNote.id } : note
-        )
-      })));
-      showNotification('Note modifiée!', 'success');
-    } else {
-      addNoteToCategory(selectedCategory, 'rich', noteData.title, noteData.content);
-      showNotification('Note enrichie ajoutée!', 'success');
-    }
-    setShowRichEditor(false);
-    setEditingNote(null);
-  };
-
-  const handlePhotoUpload = (event) => {
-    if (!selectedCategory) {
-      showNotification('Sélectionnez d\'abord une catégorie', 'error');
-      return;
-    }
-
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const title = file.name.split('.')[0];
-        addNoteToCategory(selectedCategory, 'photo', title, e.target.result);
-        showNotification('Photo ajoutée!', 'success');
-      };
-      reader.readAsDataURL(file);
-    }
-    event.target.value = '';
-  };
+    setNewFolderName('');
+    setShowCreateFolder(false);
+    showNotification('Dossier créé !', 'success');
+  }, [newFolderName, themes, currentTheme, showNotification]);
 
   const theme = themes[currentTheme];
 
   return (
     <div
-      className="min-h-screen relative overflow-hidden"
+      className="min-h-screen p-4 relative overflow-hidden"
       style={{ background: theme.bg }}
-      ref={containerRef}
     >
-      {/* Contrôles thèmes */}
-      <div className="absolute top-4 right-4 z-40">
-        <div className="flex items-center gap-2 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-3 shadow-2xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold" style={{ color: theme.text }}>
+            🧠 Mind Map Notes
+          </h1>
+
+          {/* Sélecteur de thème */}
           <select
             value={currentTheme}
             onChange={(e) => setCurrentTheme(e.target.value)}
-            className="px-3 py-1 bg-black/30 text-white rounded-lg border border-white/20 text-sm backdrop-blur-sm"
+            className="px-3 py-1 rounded-lg text-sm font-medium"
+            style={{
+              backgroundColor: theme.surface,
+              color: theme.text,
+              border: `1px solid ${theme.primary}40`
+            }}
           >
-            <option value="dark">🌙 Dark</option>
-            <option value="ocean">🌊 Ocean</option>
-            <option value="sunset">🌅 Sunset</option>
-            <option value="forest">🌲 Forest</option>
+            <option value="dark">🌙 Sombre</option>
+            <option value="ocean">🌊 Océan</option>
+            <option value="sunset">🌅 Coucher</option>
+            <option value="forest">🌲 Forêt</option>
           </select>
+        </div>
 
+        {/* Contrôles de vue */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode(viewMode === 'mindmap' ? 'list' : 'mindmap')}
-            className="p-2 bg-black/30 text-white rounded-lg border border-white/20 backdrop-blur-sm hover:bg-black/50 transition-all"
+            className="p-2 rounded-lg transition-all hover:scale-105"
+            style={{
+              backgroundColor: theme.surface,
+              color: theme.text
+            }}
           >
-            {viewMode === 'mindmap' ? <List size={16} /> : <Grid size={16} />}
+            {viewMode === 'mindmap' ? <List size={20} /> : <Grid size={20} />}
           </button>
         </div>
       </div>
 
-      {/* Contrôles latéraux */}
-      <div className="absolute left-4 top-4 z-30 space-y-3">
-        <div className="bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl">
-          <div className="flex flex-col gap-3">
-            <div className="text-white text-sm">
-              <label className="block mb-2">Taille: {globalSize}%</label>
-              <input
-                type="range"
-                min="50"
-                max="200"
-                value={globalSize}
-                onChange={(e) => setGlobalSize(parseInt(e.target.value))}
-                className="w-full"
-              />
-            </div>
-
-            <select
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value)}
-              className="px-2 py-1 bg-black/30 text-white rounded-lg border border-white/20 text-sm backdrop-blur-sm"
-            >
-              <option value="importance">⭐ Importance</option>
-              <option value="notes">📝 Nb notes</option>
-              <option value="alphabetical">🔤 Alpha</option>
-              <option value="recent">📅 Récent</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Panel info droite avec dossiers */}
-      {selectedCategory && (
-        <div className="absolute right-4 top-4 bottom-24 w-80 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl z-30 overflow-hidden">
-          {(() => {
-            const category = categories.find(c => c.id === selectedCategory);
-            if (!category) return null;
-
-            return (
-              <div className="h-full flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-3xl">{category.emoji}</span>
-                    <div>
-                      <h3 className="text-white font-bold text-lg">{category.name}</h3>
-                      <p className="text-gray-300 text-sm">{category.notes?.length || 0} notes</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Créer dossier */}
-                <div className="mb-4">
-                  {!showCreateFolder ? (
-                    <button
-                      onClick={() => setShowCreateFolder(true)}
-                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/20 text-purple-300 rounded-lg border border-purple-500/30 hover:bg-purple-500/30 transition-all text-sm"
-                    >
-                      <span>📁</span>
-                      <span>Nouveau dossier</span>
-                    </button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newFolderName}
-                        onChange={(e) => setNewFolderName(e.target.value)}
-                        placeholder="Nom du dossier"
-                        className="flex-1 px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 text-sm"
-                        autoFocus
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && newFolderName.trim()) {
-                            createFolder(selectedCategory, newFolderName.trim());
-                            setNewFolderName('');
-                            setShowCreateFolder(false);
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          if (newFolderName.trim()) {
-                            createFolder(selectedCategory, newFolderName.trim());
-                            setNewFolderName('');
-                          }
-                          setShowCreateFolder(false);
-                        }}
-                        className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-3">
-                  {/* Dossiers avec expand/collapse */}
-                  {category.folders?.map((folder) => {
-                    const folderNotes = category.notes?.filter(note => note.folderId === folder.id) || [];
-                    const isExpanded = expandedFolders[folder.id] !== false; // Par défaut ouvert
-
-                    return (
-                      <div
-                        key={folder.id}
-                        className="bg-black/30 rounded-xl border border-white/10"
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                          if (dragData.type === 'note') {
-                            moveNoteToFolder(category.id, dragData.noteId, folder.id);
-                            showNotification(`Note déplacée dans ${folder.name}`, 'success');
-                          }
-                        }}
-                        onDragOver={(e) => e.preventDefault()}
-                      >
-                        <div
-                          className="flex items-center gap-2 p-3 cursor-pointer hover:bg-black/20 transition-all"
-                          style={{ borderLeftColor: folder.color, borderLeftWidth: '4px' }}
-                          onClick={() => setExpandedFolders(prev => ({ ...prev, [folder.id]: !isExpanded }))}
-                        >
-                          <span className="text-lg">{isExpanded ? '📂' : '📁'}</span>
-                          <span className="text-white font-medium text-sm flex-1">{folder.name}</span>
-                          <span className="text-gray-400 text-xs">({folderNotes.length})</span>
-                          <span className="text-gray-400 text-xs">{isExpanded ? '▼' : '▶'}</span>
-                        </div>
-
-                        {isExpanded && (
-                          <div className="p-2 space-y-2 border-t border-white/5">
-                            {folderNotes.map((note) => (
-                              <div
-                                key={note.id}
-                                draggable
-                                onDragStart={(e) => {
-                                  e.dataTransfer.setData('text/plain', JSON.stringify({
-                                    type: 'note',
-                                    noteId: note.id,
-                                    categoryId: category.id
-                                  }));
-                                }}
-                                className="bg-black/20 rounded-lg p-2 border border-white/5 hover:border-white/20 transition-all cursor-pointer text-xs group"
-                                onClick={() => openRichEditor(note)}
-                              >
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-sm">
-                                    {note.type === 'voice' ? '🎤' :
-                                     note.type === 'photo' ? '📷' : '📝'}
-                                  </span>
-                                  <span className="text-white font-medium truncate flex-1">{note.title}</span>
-                                  <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    ⋮⋮
-                                  </span>
-                                </div>
-                                <p className="text-gray-400 text-xs truncate">
-                                  {new Date(note.timestamp).toLocaleString()}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {/* Notes sans dossier */}
-                  {category.notes?.filter(note => !note.folderId).map((note) => (
-                    <div
-                      key={note.id}
-                      draggable
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/plain', JSON.stringify({
-                          type: 'note',
-                          noteId: note.id,
-                          categoryId: category.id
-                        }));
-                      }}
-                      className="bg-black/20 rounded-xl p-3 border border-white/10 hover:border-white/20 transition-all cursor-pointer group"
-                      onClick={() => openRichEditor(note)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">
-                            {note.type === 'voice' ? '🎤' :
-                             note.type === 'photo' ? '📷' : '📝'}
-                          </span>
-                          <span className="text-white font-medium text-sm truncate">
-                            {note.title}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {category.folders && category.folders.length > 0 && (
-                            <select
-                              value={note.folderId || ''}
-                              onChange={(e) => {
-                                const folderId = e.target.value || null;
-                                moveNoteToFolder(category.id, note.id, folderId);
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-xs bg-black/30 text-gray-300 border border-white/20 rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <option value="">Sans dossier</option>
-                              {category.folders.map(folder => (
-                                <option key={folder.id} value={folder.id}>📁 {folder.name}</option>
-                              ))}
-                            </select>
-                          )}
-                          <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                            ⋮⋮
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-gray-300 text-xs truncate">
-                        {note.type === 'photo' ? 'Image' :
-                         typeof note.content === 'string' ?
-                           note.content.replace(/<[^>]*>/g, '').substring(0, 50) + '...' :
-                           'Contenu riche'
-                        }
-                      </p>
-                      <p className="text-gray-400 text-xs mt-1">
-                        {new Date(note.timestamp).toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => openRichEditor()}
-                  className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all font-medium"
-                >
-                  <Edit3 size={16} />
-                  Nouvelle note enrichie
-                </button>
-              </div>
-            );
-          })()}
+      {/* Notification */}
+      {notification && (
+        <div
+          className="fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse"
+          style={{
+            backgroundColor: notification.type === 'success' ? theme.accent : theme.secondary,
+            color: theme.text
+          }}
+        >
+          {notification.message}
         </div>
       )}
 
-      {/* Canvas principal - SIMPLE */}
-      <div className="absolute inset-0 pb-20">
-        <Stage
-          width={stageSize.width}
-          height={stageSize.height}
-          onWheel={handleWheel}
-          ref={stageRef}
-          scaleX={scale}
-          scaleY={scale}
-          x={panOffset.x}
-          y={panOffset.y}
-          draggable
-          onDragEnd={(e) => {
-            setPanOffset({
-              x: e.target.x(),
-              y: e.target.y(),
-            });
+      {viewMode === 'mindmap' ? (
+        /* Mode Mind Map avec HTML/CSS */
+        <div
+          ref={containerRef}
+          className="relative w-full h-[600px] rounded-2xl border overflow-hidden"
+          style={{
+            backgroundColor: theme.surface,
+            borderColor: theme.primary + '40'
           }}
         >
-          <Layer>
-            {categories.map((category, index) => {
-              const position = finalBallPositions[category.id] || { x: 400, y: 300 };
-              const isSelected = selectedCategory === category.id;
-              const size = (30 + category.importance * 8) * (globalSize / 100);
+          {categories.map((category, index) => {
+            const position = ballPositions[category.id] || getDefaultPosition(category.id, index);
+            const isSelected = selectedCategory === category.id;
+            const isDragging = draggedBall === category.id;
 
-              return (
-                <Group
-                  key={category.id}
-                  x={position.x}
-                  y={position.y}
-                  draggable={true}
-                  onDragStart={() => setIsDragging(true)}
-                  onDragEnd={(e) => {
-                    setIsDragging(false);
-                    handleBallDragEnd(category.id, e);
-                  }}
-                  onClick={(e) => {
-                    e.cancelBubble = true; // Empêcher la propagation
-                    setSelectedCategory(category.id);
-                  }}
-                  onTap={(e) => {
-                    e.cancelBubble = true;
-                    setSelectedCategory(category.id);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    try {
-                      const dragData = JSON.parse(e.dataTransfer?.getData('text/plain') || '{}');
-                      if (dragData.type === 'note' && dragData.categoryId !== category.id) {
-                        moveNoteToCategoryFromDrag(dragData.noteId, dragData.categoryId, category.id);
-                      }
-                    } catch (err) {
-                      console.log('Drop ignored');
-                    }
+            return (
+              <div
+                key={category.id}
+                className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-100 cursor-grab ${
+                  isDragging ? 'scale-110 z-50 cursor-grabbing' : isSelected ? 'scale-105 z-40' : 'z-10'
+                }`}
+                style={{
+                  left: position.x,
+                  top: position.y,
+                }}
+                onMouseDown={(e) => handleBallMouseDown(e, category.id)}
+                onClick={() => setSelectedCategory(category.id)}
+              >
+                {/* Boule principale */}
+                <div
+                  className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold shadow-2xl ${
+                    isSelected ? 'ring-4 ring-white/50' : ''
+                  }`}
+                  style={{
+                    backgroundColor: category.color,
+                    boxShadow: isSelected
+                      ? `0 0 30px ${category.color}80, 0 10px 20px rgba(0,0,0,0.5)`
+                      : `0 0 15px ${category.color}40, 0 5px 15px rgba(0,0,0,0.3)`
                   }}
                 >
-                  {/* Cercle principal */}
-                  <Circle
-                    radius={size}
-                    fill={category.color}
-                    stroke={isSelected ? theme.accent : 'transparent'}
-                    strokeWidth={isSelected ? 4 : 0}
-                    shadowBlur={isSelected ? 20 : 10}
-                    shadowColor={category.color}
-                    shadowOpacity={isSelected ? 0.6 : 0.3}
-                  />
+                  {category.emoji}
+                </div>
 
-                  {/* Cercle interne */}
-                  <Circle
-                    radius={size * 0.8}
-                    fill={category.color}
-                    opacity={0.7}
-                  />
+                {/* Nom */}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 text-sm font-bold text-center whitespace-nowrap"
+                     style={{ color: theme.text }}>
+                  {category.name}
+                </div>
 
-                  {/* Emoji */}
-                  <Text
-                    text={category.emoji}
-                    fontSize={size * 0.6}
-                    x={-size * 0.3}
-                    y={-size * 0.3}
-                    fill={theme.text}
-                  />
+                {/* Compteur de notes */}
+                <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                     style={{ backgroundColor: theme.accent, color: theme.text }}>
+                  {category.notes.length}
+                </div>
 
-                  {/* Nom */}
-                  <Text
-                    text={category.name}
-                    fontSize={Math.max(12, size * 0.2)}
-                    x={-size}
-                    y={size + 10}
-                    width={size * 2}
-                    align="center"
-                    fill={theme.text}
-                    fontStyle="bold"
-                  />
-
-                  {/* Compteur */}
-                  <Circle
-                    x={size * 0.7}
-                    y={-size * 0.7}
-                    radius={12}
-                    fill={theme.accent}
-                  />
-                  <Text
-                    text={category.notes?.length || 0}
-                    fontSize={10}
-                    x={size * 0.7 - 6}
-                    y={-size * 0.7 - 5}
-                    fill={theme.text}
-                    fontStyle="bold"
-                  />
-                </Group>
-              );
-            })}
-          </Layer>
-        </Stage>
-      </div>
-
-      {/* Boutons d'action */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-40">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={addTextNote}
-            className="flex items-center justify-center w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl shadow-2xl transition-all hover:scale-110 border border-blue-400/30"
-            disabled={!selectedCategory}
-          >
-            <Type size={24} />
-          </button>
-
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            className={`flex items-center justify-center w-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-110 border ${
-              isRecording
-                ? 'bg-red-500 hover:bg-red-600 animate-pulse border-red-400/30'
-                : 'bg-red-500 hover:bg-red-600 border-red-400/30'
-            }`}
-            disabled={!selectedCategory}
-          >
-            {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
-          </button>
-
-          <label className="flex items-center justify-center w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-2xl shadow-2xl transition-all hover:scale-110 cursor-pointer border border-green-400/30">
-            <ImageIcon size={24} />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoUpload}
-              className="hidden"
-              disabled={!selectedCategory}
-            />
-          </label>
+                {/* Indicateur de drag */}
+                {isDragging && (
+                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs"
+                       style={{ color: theme.primary }}>
+                    Position: ({Math.round(position.x)}, {Math.round(position.y)})
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      </div>
+      ) : (
+        /* Mode Liste */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories.map(category => (
+            <div
+              key={category.id}
+              className="p-6 rounded-xl shadow-lg"
+              style={{ backgroundColor: theme.surface }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
+                  style={{ backgroundColor: category.color }}
+                >
+                  {category.emoji}
+                </div>
+                <h3 className="text-xl font-bold" style={{ color: theme.text }}>
+                  {category.name}
+                </h3>
+              </div>
 
-      {/* Modal note texte */}
+              <div className="space-y-2">
+                {category.notes.map(note => (
+                  <div
+                    key={note.id}
+                    className="p-3 rounded-lg"
+                    style={{ backgroundColor: theme.bg }}
+                  >
+                    <div className="font-medium" style={{ color: theme.text }}>
+                      {note.title}
+                    </div>
+                    <div className="text-sm" style={{ color: theme.textSecondary }}>
+                      {note.content}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Panel latéral pour la catégorie sélectionnée */}
+      {selectedCategory && (
+        <div
+          className="fixed right-0 top-0 h-full w-80 p-6 shadow-2xl z-40 overflow-y-auto"
+          style={{ backgroundColor: theme.surface }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold" style={{ color: theme.text }}>
+              {categories.find(c => c.id === selectedCategory)?.name}
+            </h2>
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="p-1 rounded-full hover:bg-white/10"
+              style={{ color: theme.text }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Contenu du panel - notes, dossiers, etc. */}
+          <div className="space-y-4">
+            <div className="text-sm" style={{ color: theme.textSecondary }}>
+              {categories.find(c => c.id === selectedCategory)?.notes.length || 0} notes
+            </div>
+
+            {/* Liste des notes */}
+            {categories.find(c => c.id === selectedCategory)?.notes.map(note => (
+              <div
+                key={note.id}
+                className="p-3 rounded-lg"
+                style={{ backgroundColor: theme.bg }}
+              >
+                <div className="font-medium" style={{ color: theme.text }}>
+                  {note.title}
+                </div>
+                <div className="text-sm mt-1" style={{ color: theme.textSecondary }}>
+                  {note.content}
+                </div>
+              </div>
+            ))}
+
+            {/* Boutons d'action */}
+            <div className="flex gap-2 pt-4">
+              <button
+                onClick={() => setShowTextModal(true)}
+                className="flex-1 p-2 rounded-lg text-sm font-medium transition-all hover:scale-105"
+                style={{
+                  backgroundColor: theme.primary,
+                  color: theme.text
+                }}
+              >
+                <Type size={16} className="inline mr-2" />
+                Texte
+              </button>
+              <button
+                onClick={() => setIsRecording(!isRecording)}
+                className="flex-1 p-2 rounded-lg text-sm font-medium transition-all hover:scale-105"
+                style={{
+                  backgroundColor: isRecording ? theme.secondary : theme.accent,
+                  color: theme.text
+                }}
+              >
+                {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                <span className="ml-2">{isRecording ? 'Stop' : 'Voice'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour ajouter du texte */}
       {showTextModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Nouvelle note texte</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div
+            className="w-96 p-6 rounded-xl"
+            style={{ backgroundColor: theme.surface }}
+          >
+            <h3 className="text-lg font-bold mb-4" style={{ color: theme.text }}>
+              Nouvelle note texte
+            </h3>
             <textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Tapez votre note ici..."
-              className="w-full h-32 p-3 border border-gray-200 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
+              placeholder="Tapez votre note..."
+              className="w-full h-32 p-3 rounded-lg resize-none"
+              style={{
+                backgroundColor: theme.bg,
+                color: theme.text,
+                border: `1px solid ${theme.primary}40`
+              }}
             />
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-2 mt-4">
               <button
-                onClick={saveTextNote}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-xl font-medium transition-all"
+                onClick={() => {
+                  if (textInput.trim() && selectedCategory) {
+                    addNote(selectedCategory, {
+                      type: 'text',
+                      title: textInput.slice(0, 30) + '...',
+                      content: textInput,
+                      timestamp: Date.now(),
+                      folderId: null
+                    });
+                    setTextInput('');
+                    setShowTextModal(false);
+                  }
+                }}
+                className="flex-1 p-2 rounded-lg font-medium"
+                style={{
+                  backgroundColor: theme.primary,
+                  color: theme.text
+                }}
               >
-                Sauvegarder
+                Ajouter
               </button>
               <button
                 onClick={() => {
-                  setShowTextModal(false);
                   setTextInput('');
+                  setShowTextModal(false);
                 }}
-                className="px-6 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-xl font-medium transition-all"
+                className="flex-1 p-2 rounded-lg font-medium"
+                style={{
+                  backgroundColor: theme.surface,
+                  color: theme.text,
+                  border: `1px solid ${theme.primary}40`
+                }}
               >
                 Annuler
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Éditeur riche */}
-      {showRichEditor && (
-        <RichNoteEditor
-          note={editingNote}
-          onSave={saveRichNote}
-          onClose={() => {
-            setShowRichEditor(false);
-            setEditingNote(null);
-          }}
-          categoryColor={categories.find(c => c.id === selectedCategory)?.color}
-        />
-      )}
-
-      {/* Notifications */}
-      {notification && (
-        <div className="fixed top-24 right-4 z-50 animate-fade-in">
-          <div className={`px-6 py-3 rounded-xl shadow-lg backdrop-blur-sm border ${
-            notification.type === 'success' ? 'bg-green-500/20 border-green-500/30 text-green-100' :
-            notification.type === 'error' ? 'bg-red-500/20 border-red-500/30 text-red-100' :
-            'bg-blue-500/20 border-blue-500/30 text-blue-100'
-          }`}>
-            {notification.message}
           </div>
         </div>
       )}
