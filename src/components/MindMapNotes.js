@@ -24,6 +24,11 @@ const MindMapNotes = () => {
   const [newFolderName, setNewFolderName] = useState('');
   const [richEditorContent, setRichEditorContent] = useState('');
 
+  // États pour l'enregistrement vocal
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState(null);
+
   // États pour le drag des boules - SIMPLE ET EFFICACE
   const [ballPositions, setBallPositions] = useState({});
   const [draggedBall, setDraggedBall] = useState(null);
@@ -33,6 +38,13 @@ const MindMapNotes = () => {
   const [draggedItem, setDraggedItem] = useState(null);
   const [draggedItemType, setDraggedItemType] = useState(null);
   const [dragOverTarget, setDragOverTarget] = useState(null);
+
+  // États pour zoom et pan tactile
+  const [scale, setScale] = useState(1);
+  const [translateX, setTranslateX] = useState(0);
+  const [translateY, setTranslateY] = useState(0);
+  const [lastTouchDistance, setLastTouchDistance] = useState(0);
+  const [isPanning, setIsPanning] = useState(false);
 
   // Refs
   const containerRef = useRef();
@@ -162,8 +174,10 @@ const MindMapNotes = () => {
     e.stopPropagation();
 
     const rect = containerRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
 
     const categoryIndex = categories.findIndex(c => c.id === categoryId);
     const currentPos = ballPositions[categoryId] || getDefaultBallPosition(categoryId, categoryIndex);
@@ -176,12 +190,58 @@ const MindMapNotes = () => {
     });
   }, [categories, ballPositions, getDefaultBallPosition]);
 
+  const handleBallTouchStart = useCallback((e, categoryId) => {
+    if (e.touches.length === 1) {
+      handleBallMouseDown(e, categoryId);
+    }
+  }, [handleBallMouseDown]);
+
+  // Gestion des gestes tactiles pour zoom et pan
+  const getTouchDistance = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const handleContainerTouchStart = useCallback((e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const distance = getTouchDistance(e.touches);
+      setLastTouchDistance(distance);
+      setIsPanning(false);
+    } else if (e.touches.length === 1) {
+      setIsPanning(true);
+    }
+  }, []);
+
+  const handleContainerTouchMove = useCallback((e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const distance = getTouchDistance(e.touches);
+      if (lastTouchDistance > 0) {
+        const scaleChange = distance / lastTouchDistance;
+        const newScale = Math.min(Math.max(scale * scaleChange, 0.5), 3);
+        setScale(newScale);
+      }
+      setLastTouchDistance(distance);
+    }
+  }, [lastTouchDistance, scale]);
+
+  const handleContainerTouchEnd = useCallback((e) => {
+    if (e.touches.length < 2) {
+      setLastTouchDistance(0);
+      setIsPanning(false);
+    }
+  }, []);
+
   const handleBallMouseMove = useCallback((e) => {
     if (!draggedBall) return;
 
     const rect = containerRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+    const mouseX = clientX - rect.left;
+    const mouseY = clientY - rect.top;
 
     const newX = mouseX - dragOffset.x;
     const newY = mouseY - dragOffset.y;
@@ -282,6 +342,79 @@ const MindMapNotes = () => {
     event.target.value = '';
   }, [showNotification]);
 
+  // Fonctions d'enregistrement vocal
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const audioChunks = [];
+
+      recorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        setAudioBlob(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // Timer pour afficher la durée
+      const timer = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      // Stocker timer pour pouvoir le nettoyer
+      recorder.timer = timer;
+
+    } catch (error) {
+      showNotification('Erreur accès microphone', 'error');
+    }
+  }, [showNotification]);
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorder && isRecording) {
+      if (mediaRecorder.timer) {
+        clearInterval(mediaRecorder.timer);
+      }
+      mediaRecorder.stop();
+      setMediaRecorder(null);
+      setIsRecording(false);
+    }
+  }, [mediaRecorder, isRecording]);
+
+  const saveVoiceNote = useCallback(() => {
+    if (!audioBlob || !noteTitle.trim() || !selectedCategory) return;
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const newNote = {
+      id: Date.now(),
+      type: 'audio',
+      title: noteTitle,
+      content: audioUrl,
+      duration: recordingTime,
+      timestamp: Date.now(),
+      folderId: null
+    };
+
+    setCategories(prev => prev.map(cat =>
+      cat.id === selectedCategory
+        ? { ...cat, notes: [...cat.notes, newNote] }
+        : cat
+    ));
+
+    setNoteTitle('');
+    setAudioBlob(null);
+    setRecordingTime(0);
+    setShowTextModal(false);
+    showNotification('Note vocale ajoutée !', 'success');
+  }, [audioBlob, noteTitle, selectedCategory, recordingTime, showNotification]);
+
   // Gestion du drag organisé des fichiers/dossiers
   const handleItemDragStart = useCallback((e, itemId, itemType) => {
     setDraggedItem(itemId);
@@ -375,17 +508,12 @@ const MindMapNotes = () => {
     }
   }, [initialCategories]);
 
-  // Auto-backup whenever categories change
+  // Save to localStorage whenever categories change (no auto-backup download)
   useEffect(() => {
     if (categories.length > 0) {
       localStorage.setItem('mindmap-categories', JSON.stringify(categories));
-      // Trigger auto-backup after a delay to avoid too frequent downloads
-      const timeoutId = setTimeout(() => {
-        autoBackup();
-      }, 2000);
-      return () => clearTimeout(timeoutId);
     }
-  }, [categories, autoBackup]);
+  }, [categories]);
 
   // Autres fonctions utilitaires
 
@@ -711,8 +839,12 @@ const MindMapNotes = () => {
         style={{
           backgroundColor: theme.surface,
           borderColor: theme.border,
-          boxShadow: `0 20px 60px ${theme.shadow}`
+          boxShadow: `0 20px 60px ${theme.shadow}`,
+          transform: `scale(${scale}) translate(${translateX}px, ${translateY}px)`
         }}
+        onTouchStart={handleContainerTouchStart}
+        onTouchMove={handleContainerTouchMove}
+        onTouchEnd={handleContainerTouchEnd}
       >
         {categories.map((category, index) => {
           const position = ballPositions[category.id] || getDefaultBallPosition(category.id, index);
@@ -730,6 +862,7 @@ const MindMapNotes = () => {
                 top: position.y,
               }}
               onMouseDown={(e) => handleBallMouseDown(e, category.id)}
+              onTouchStart={(e) => handleBallTouchStart(e, category.id)}
               onClick={() => setSelectedCategory(category.id)}
             >
               {/* Boule avec design moderne */}
@@ -1044,13 +1177,44 @@ const MindMapNotes = () => {
                   boxShadow: `0 4px 15px ${theme.primary}40`
                 }}
               >
-                Ouvrir l'éditeur
+                📝 Texte
               </button>
+
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                className="flex-1 p-3 rounded-xl font-medium transition-all hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: isRecording ? theme.error : theme.secondary,
+                  color: theme.text,
+                  boxShadow: `0 4px 15px ${isRecording ? theme.error : theme.secondary}40`
+                }}
+              >
+                {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
+                {isRecording ? `🔴 ${recordingTime}s` : '🎤 Vocal'}
+              </button>
+
+              {audioBlob && (
+                <button
+                  onClick={saveVoiceNote}
+                  className="flex-1 p-3 rounded-xl font-medium transition-all hover:scale-105 shadow-lg"
+                  style={{
+                    backgroundColor: theme.success,
+                    color: theme.text,
+                    boxShadow: `0 4px 15px ${theme.success}40`
+                  }}
+                >
+                  💾 Sauver
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setShowTextModal(false);
                   setNoteTitle('');
                   setTextInput('');
+                  setAudioBlob(null);
+                  setRecordingTime(0);
+                  if (isRecording) stopRecording();
                 }}
                 className="px-6 p-3 rounded-xl font-medium border transition-all hover:scale-105"
                 style={{
