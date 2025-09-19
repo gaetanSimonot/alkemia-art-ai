@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Stage, Layer, Circle, Text as KonvaText, Line, Group } from 'react-konva';
 import { Mic, MicOff, Camera, Edit3, Zap, Settings, Search, Filter, Plus, Save, Download } from 'lucide-react';
+import RichNoteEditor from './RichNoteEditor';
 
 // Données exemple avec catégories pré-remplies
 const initialCategories = [
@@ -151,6 +152,8 @@ const MindMapNotes = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [showTextInput, setShowTextInput] = useState(false);
+  const [showRichEditor, setShowRichEditor] = useState(false);
+  const [editingNote, setEditingNote] = useState(null);
   const [notification, setNotification] = useState(null);
 
   // States pour la vue et les filtres
@@ -166,21 +169,50 @@ const MindMapNotes = () => {
 
   const theme = themes[currentTheme];
 
-  // Calculer la taille des bulles selon l'importance et le nombre de notes
-  const getBubbleSize = (category) => {
+  // Calculer la taille des bulles selon l'importance et le nombre de notes (optimisé)
+  const getBubbleSize = useCallback((category) => {
     const baseSize = 60;
-    const importanceBonus = category.importance * 10;
-    const notesBonus = category.notes.length * 5;
-    return (baseSize + importanceBonus + notesBonus) * globalScale;
-  };
+    const importanceBonus = category.importance * 8; // Réduit pour moins de variation
+    const notesBonus = category.notes.length * 3; // Réduit pour moins de variation
+    return Math.min((baseSize + importanceBonus + notesBonus) * globalScale, 120); // Taille max
+  }, [globalScale]);
 
-  // Positionner les bulles en cercle pour la vue Mind Map
+  // Positions calculées une seule fois
+  const finalCategoryPositions = useMemo(() => {
+    return categories.map((category, index) => {
+      let finalX = category.x;
+      let finalY = category.y;
+
+      if (viewMode === 'mindmap' && !category.customPosition) {
+        const centerX = 400;
+        const centerY = 300;
+        const radius = 200 * globalScale;
+        const angle = (index / categories.length) * 2 * Math.PI;
+        finalX = centerX + Math.cos(angle) * radius;
+        finalY = centerY + Math.sin(angle) * radius;
+      }
+
+      return {
+        ...category,
+        finalX,
+        finalY,
+        size: getBubbleSize(category)
+      };
+    });
+  }, [categories, viewMode, globalScale, getBubbleSize]);
+
+  // Positionner les bulles en cercle pour la vue Mind Map (optimisé)
   const getCircularPositions = () => {
+    if (viewMode !== 'mindmap') return categories;
+
     const centerX = 400;
     const centerY = 300;
     const radius = 200 * globalScale;
 
     return categories.map((category, index) => {
+      if (category.customPosition) {
+        return category; // Garder position custom
+      }
       const angle = (index / categories.length) * 2 * Math.PI;
       return {
         ...category,
@@ -280,6 +312,36 @@ const MindMapNotes = () => {
     showNotification('Note texte ajoutée!', 'success');
   };
 
+  // Ouvrir l'éditeur riche
+  const openRichEditor = (note = null) => {
+    if (!selectedCategory && !note) {
+      showNotification('Sélectionnez une catégorie avant de créer une note', 'warning');
+      return;
+    }
+    setEditingNote(note);
+    setShowRichEditor(true);
+  };
+
+  // Sauvegarder une note riche
+  const saveRichNote = (noteData) => {
+    if (editingNote) {
+      // Modifier note existante
+      setCategories(prev => prev.map(cat => ({
+        ...cat,
+        notes: cat.notes.map(note =>
+          note.id === editingNote.id ? noteData : note
+        )
+      })));
+    } else {
+      // Nouvelle note
+      addNoteToCategory(selectedCategory, 'rich', noteData.content);
+    }
+
+    setShowRichEditor(false);
+    setEditingNote(null);
+    showNotification('Note sauvegardée!', 'success');
+  };
+
   // Gestion du zoom avec la molette
   const handleWheel = (e) => {
     e.evt.preventDefault();
@@ -328,56 +390,61 @@ const MindMapNotes = () => {
     });
   };
 
-  // Rendu des catégories
-  const renderCategories = () => {
-    const displayCategories = viewMode === 'mindmap' ? getCircularPositions() : categories;
-
-    return displayCategories.map((category) => {
-      const size = getBubbleSize(category);
+  // Rendu des catégories (super optimisé)
+  const renderCategories = useCallback(() => {
+    return finalCategoryPositions.map((category) => {
       const isSelected = selectedCategory === category.id;
 
       return (
         <Group
           key={category.id}
-          x={category.x}
-          y={category.y}
+          x={category.finalX}
+          y={category.finalY}
           draggable
-          onDragEnd={(e) => {
-            const updatedCategories = categories.map(cat =>
+          onDragStart={() => {
+            // Marquer comme position custom quand on commence à glisser
+            setCategories(prev => prev.map(cat =>
               cat.id === category.id
-                ? { ...cat, x: e.target.x(), y: e.target.y() }
+                ? { ...cat, customPosition: true }
                 : cat
-            );
-            setCategories(updatedCategories);
+            ));
+          }}
+          onDragEnd={(e) => {
+            // Sauver la nouvelle position
+            setCategories(prev => prev.map(cat =>
+              cat.id === category.id
+                ? { ...cat, x: e.target.x(), y: e.target.y(), customPosition: true }
+                : cat
+            ));
           }}
           onClick={() => setSelectedCategory(category.id)}
           onTap={() => setSelectedCategory(category.id)}
         >
           <Circle
-            radius={size / 2}
+            radius={category.size / 2}
             fill={category.color}
             stroke={isSelected ? '#FFFFFF' : 'transparent'}
             strokeWidth={3}
             opacity={0.8}
-            shadowBlur={10}
+            shadowBlur={5}
             shadowColor={category.color}
           />
           <KonvaText
             text={`${category.emoji}\n${category.name}\n${category.notes.length} notes`}
-            fontSize={12}
+            fontSize={Math.max(10, category.size * 0.12)}
             fontFamily="Arial"
             fill="white"
             align="center"
             verticalAlign="middle"
-            width={size}
-            height={size}
-            offsetX={size / 2}
-            offsetY={size / 2}
+            width={category.size}
+            height={category.size}
+            offsetX={category.size / 2}
+            offsetY={category.size / 2}
           />
         </Group>
       );
     });
-  };
+  }, [finalCategoryPositions, selectedCategory, setCategories]);
 
   return (
     <div
@@ -451,9 +518,9 @@ const MindMapNotes = () => {
         </div>
       </div>
 
-      {/* Sidebar gauche - Contrôles */}
-      <div className="fixed left-4 top-1/2 transform -translate-y-1/2 z-30 space-y-4">
-        <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-2xl p-4 space-y-4">
+      {/* Sidebar gauche - Contrôles (responsive) */}
+      <div className="fixed left-2 md:left-4 top-20 md:top-1/2 md:transform md:-translate-y-1/2 z-30 space-y-4">
+        <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl md:rounded-2xl p-2 md:p-4 space-y-2 md:space-y-4">
           {/* Taille globale */}
           <div>
             <label className="block text-sm mb-2" style={{ color: theme.textColor }}>
@@ -495,10 +562,10 @@ const MindMapNotes = () => {
         </div>
       </div>
 
-      {/* Panel info droite */}
+      {/* Panel info droite (responsive) */}
       {selectedCategory && (
-        <div className="fixed right-4 top-1/2 transform -translate-y-1/2 z-30 w-80">
-          <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-2xl p-6">
+        <div className="fixed right-2 md:right-4 top-20 md:top-1/2 md:transform md:-translate-y-1/2 z-30 w-64 md:w-80">
+          <div className="backdrop-blur-lg bg-white/10 border border-white/20 rounded-xl md:rounded-2xl p-3 md:p-6">
             {(() => {
               const category = categories.find(c => c.id === selectedCategory);
               return (
@@ -515,31 +582,60 @@ const MindMapNotes = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 max-h-48 md:max-h-60 overflow-y-auto">
                     {category.notes.map((note) => (
                       <div
                         key={note.id}
-                        className="p-3 rounded-xl bg-white/5 border border-white/10"
+                        className="p-2 md:p-3 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+                        onClick={() => openRichEditor(note)}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-xs">
-                            {note.type === 'voice' ? '🎤' : note.type === 'photo' ? '📷' : '📝'}
+                            {note.type === 'voice' ? '🎤' : note.type === 'photo' ? '📷' : note.type === 'rich' ? '📄' : '📝'}
                           </span>
                           <span className="text-xs opacity-75" style={{ color: theme.textColor }}>
                             {new Date(note.timestamp).toLocaleDateString()}
                           </span>
                         </div>
-                        <p className="text-sm" style={{ color: theme.textColor }}>
-                          {note.content}
+                        <p className="text-xs md:text-sm line-clamp-2" style={{ color: theme.textColor }}>
+                          {typeof note.content === 'string'
+                            ? note.content.replace(/<[^>]*>/g, '').substring(0, 50) + '...'
+                            : note.content
+                          }
                         </p>
                       </div>
                     ))}
                   </div>
+
+                  {/* Bouton nouvelle note riche */}
+                  <button
+                    onClick={() => openRichEditor()}
+                    className="w-full mt-3 px-3 py-2 bg-blue-500/30 text-white rounded-xl text-sm hover:bg-blue-500/40 transition-all"
+                  >
+                    ✍️ Nouvelle note
+                  </button>
                 </div>
               );
             })()}
           </div>
         </div>
+      )}
+
+      {/* Éditeur de notes riche */}
+      {showRichEditor && (
+        <RichNoteEditor
+          note={editingNote}
+          onSave={saveRichNote}
+          onClose={() => {
+            setShowRichEditor(false);
+            setEditingNote(null);
+          }}
+          categoryColor={
+            selectedCategory
+              ? categories.find(c => c.id === selectedCategory)?.color || '#3B82F6'
+              : '#3B82F6'
+          }
+        />
       )}
 
       {/* Canvas principal */}
