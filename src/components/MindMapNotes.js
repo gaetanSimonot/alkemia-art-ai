@@ -31,6 +31,9 @@ const MindMapNotes = () => {
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
 
+  // Positions fixes pour chaque catégorie (séparées des données)
+  const [categoryPositions, setCategoryPositions] = useState({});
+
   // Refs optimisées
   const stageRef = useRef();
   const mediaRecorderRef = useRef();
@@ -199,10 +202,16 @@ const MindMapNotes = () => {
   // Initialisation des données
   useEffect(() => {
     const saved = localStorage.getItem('mindmap-categories');
+    const savedPositions = localStorage.getItem('mindmap-positions');
+
     if (saved) {
       setCategories(JSON.parse(saved));
     } else {
       setCategories(initialCategories);
+    }
+
+    if (savedPositions) {
+      setCategoryPositions(JSON.parse(savedPositions));
     }
 
     const updateStageSize = () => {
@@ -227,44 +236,60 @@ const MindMapNotes = () => {
     }
   }, [categories]);
 
-  // Calcul optimisé des positions des catégories
-  const categoryPositions = useMemo(() => {
+  // Sauvegarder les positions à chaque changement
+  useEffect(() => {
+    if (Object.keys(categoryPositions).length > 0) {
+      localStorage.setItem('mindmap-positions', JSON.stringify(categoryPositions));
+    }
+  }, [categoryPositions]);
+
+  // Initialiser les positions automatiques seulement pour les nouvelles catégories
+  useEffect(() => {
     const centerX = stageSize.width / 2;
     const centerY = stageSize.height / 2;
-    const radius = Math.min(stageSize.width, stageSize.height) * 0.3 * (globalSize / 100);
+    const radius = Math.min(stageSize.width, stageSize.height) * 0.3;
 
-    return categories.map((category, index) => {
-      // Si position custom définie, l'utiliser
-      if (category.customPosition) {
-        return {
-          ...category,
-          finalX: category.customPosition.x,
-          finalY: category.customPosition.y,
-          size: viewMode === 'list' ? 60 : (30 + category.importance * 8) * (globalSize / 100)
-        };
+    categories.forEach((category, index) => {
+      // Ne calculer position que si elle n'existe pas déjà
+      if (!categoryPositions[category.id]) {
+        const angle = (index * 2 * Math.PI) / categories.length;
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+
+        setCategoryPositions(prev => ({
+          ...prev,
+          [category.id]: {
+            x: viewMode === 'list' ? centerX : x,
+            y: viewMode === 'list' ? 100 + index * 120 : y
+          }
+        }));
       }
+    });
+  }, [categories.length, stageSize.width, stageSize.height, viewMode]);
 
-      // Sinon calculer position automatique
-      const angle = (index * 2 * Math.PI) / categories.length;
-      const x = centerX + Math.cos(angle) * radius;
-      const y = centerY + Math.sin(angle) * radius;
+  // Calculer les données finales pour le rendu (memoization sur les positions stables)
+  const finalCategoryData = useMemo(() => {
+    return categories.map((category) => {
+      const position = categoryPositions[category.id] || { x: 400, y: 300 };
 
       return {
         ...category,
-        finalX: viewMode === 'list' ? centerX : x,
-        finalY: viewMode === 'list' ? 100 + index * 120 : y,
+        finalX: position.x,
+        finalY: position.y,
         size: viewMode === 'list' ? 60 : (30 + category.importance * 8) * (globalSize / 100)
       };
     });
-  }, [categories, stageSize, globalSize, viewMode]);
+  }, [categories, categoryPositions, globalSize, viewMode]);
 
-  // Gestion du drag individuel optimisée
+  // Gestion du drag individuel - mise à jour directe des positions
   const handleCategoryDragEnd = useCallback((categoryId, newPos) => {
-    setCategories(prev => prev.map(cat =>
-      cat.id === categoryId
-        ? { ...cat, customPosition: { x: newPos.x, y: newPos.y } }
-        : cat
-    ));
+    setCategoryPositions(prev => ({
+      ...prev,
+      [categoryId]: {
+        x: newPos.x,
+        y: newPos.y
+      }
+    }));
   }, []);
 
   // Gestion zoom optimisée
@@ -467,7 +492,7 @@ const MindMapNotes = () => {
 
   // Rendu des bulles optimisé
   const renderCategories = useMemo(() => {
-    return categoryPositions.map((category) => {
+    return finalCategoryData.map((category) => {
       const isSelected = selectedCategory === category.id;
 
       return (
@@ -542,7 +567,7 @@ const MindMapNotes = () => {
         </Group>
       );
     });
-  }, [categoryPositions, selectedCategory, themes, currentTheme, handleCategoryDragEnd]);
+  }, [finalCategoryData, selectedCategory, themes, currentTheme, handleCategoryDragEnd]);
 
   const theme = themes[currentTheme];
 
