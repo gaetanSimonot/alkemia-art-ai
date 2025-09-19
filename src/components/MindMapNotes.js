@@ -204,6 +204,11 @@ const MindMapNotes = () => {
   }, [draggedBall, ballPositions]);
 
   // Fonctions utilitaires - DÉPLACÉ EN PREMIER
+  const showNotification = useCallback((message, type = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  }, []);
+
   const autoBackup = useCallback(() => {
     const backupData = {
       categories,
@@ -276,11 +281,6 @@ const MindMapNotes = () => {
     // Reset input for allowing same file selection again
     event.target.value = '';
   }, [showNotification]);
-
-  const showNotification = useCallback((message, type = 'info') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  }, []);
 
   // Gestion du drag organisé des fichiers/dossiers
   const handleItemDragStart = useCallback((e, itemId, itemType) => {
