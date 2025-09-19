@@ -7,10 +7,10 @@ import {
 import RichNoteEditor from './RichNoteEditor';
 
 const MindMapNotes = () => {
-  // États principaux optimisés
+  // États principaux
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [viewMode, setViewMode] = useState('mindmap'); // mindmap ou list
+  const [viewMode, setViewMode] = useState('mindmap');
   const [currentTheme, setCurrentTheme] = useState('dark');
   const [globalSize, setGlobalSize] = useState(100);
   const [sortMode, setSortMode] = useState('importance');
@@ -22,25 +22,24 @@ const MindMapNotes = () => {
   const [textInput, setTextInput] = useState('');
   const [showRichEditor, setShowRichEditor] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
-  const [folders, setFolders] = useState([]);
   const [newFolderName, setNewFolderName] = useState('');
   const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState({});
 
   // États pour la navigation canvas
   const [scale, setScale] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 });
+  const [ballPositions, setBallPositions] = useState({});
+  const [isDragging, setIsDragging] = useState(false);
 
-  // Positions fixes pour chaque catégorie (séparées des données)
-  const [categoryPositions, setCategoryPositions] = useState({});
-
-  // Refs optimisées
+  // Refs
   const stageRef = useRef();
   const mediaRecorderRef = useRef();
   const audioChunksRef = useRef([]);
   const containerRef = useRef();
 
-  // Thèmes optimisés
+  // Thèmes
   const themes = useMemo(() => ({
     dark: {
       bg: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
@@ -84,7 +83,7 @@ const MindMapNotes = () => {
     }
   }), []);
 
-  // Données initiales optimisées
+  // Données initiales
   const initialCategories = useMemo(() => [
     {
       id: 'work',
@@ -92,17 +91,14 @@ const MindMapNotes = () => {
       name: 'Travail',
       importance: 5,
       color: '#4a90ff',
-      x: 0, y: 0,
-      customPosition: null,
       notes: [
         { id: 1, type: 'voice', title: 'Réunion équipe', content: 'Réunion équipe demain 14h', timestamp: Date.now() - 86400000, folderId: null },
-        { id: 2, type: 'text', title: 'Rapport projet', content: 'Finir rapport pour vendredi', timestamp: Date.now() - 43200000, folderId: null }
+        { id: 2, type: 'text', title: 'Rapport projet', content: 'Finir rapport pour vendredi', timestamp: Date.now() - 43200000, folderId: 'folder-1' }
       ],
       folders: [
         { id: 'folder-1', name: 'Urgent', color: '#ff4444' },
         { id: 'folder-2', name: 'Projets', color: '#44ff44' }
-      ],
-      connections: []
+      ]
     },
     {
       id: 'personal',
@@ -110,13 +106,11 @@ const MindMapNotes = () => {
       name: 'Personnel',
       importance: 4,
       color: '#06d6a0',
-      x: 0, y: 0,
-      customPosition: null,
       notes: [
-        { id: 3, type: 'photo', title: 'Courses', content: 'Photo liste courses', timestamp: Date.now() - 129600000 },
-        { id: 4, type: 'text', title: 'Anniversaire', content: 'Anniversaire maman le 15', timestamp: Date.now() - 216000000 }
+        { id: 3, type: 'photo', title: 'Courses', content: 'Photo liste courses', timestamp: Date.now() - 129600000, folderId: null },
+        { id: 4, type: 'text', title: 'Anniversaire', content: 'Anniversaire maman le 15', timestamp: Date.now() - 216000000, folderId: null }
       ],
-      connections: []
+      folders: []
     },
     {
       id: 'ideas',
@@ -124,85 +118,19 @@ const MindMapNotes = () => {
       name: 'Idées',
       importance: 5,
       color: '#f59e0b',
-      x: 0, y: 0,
-      customPosition: null,
       notes: [
-        { id: 5, type: 'voice', title: 'App mobile', content: 'Idée app mobile pour les courses', timestamp: Date.now() - 302400000 },
-        { id: 6, type: 'text', title: 'Blog article', content: 'Article sur la productivité', timestamp: Date.now() - 388800000 }
+        { id: 5, type: 'voice', title: 'App mobile', content: 'Idée app mobile pour les courses', timestamp: Date.now() - 302400000, folderId: null },
+        { id: 6, type: 'text', title: 'Blog article', content: 'Article sur la productivité', timestamp: Date.now() - 388800000, folderId: null }
       ],
-      connections: []
-    },
-    {
-      id: 'projects',
-      emoji: '🚀',
-      name: 'Projets',
-      importance: 5,
-      color: '#ec4899',
-      x: 0, y: 0,
-      customPosition: null,
-      notes: [
-        { id: 7, type: 'text', title: 'Site web', content: 'Refonte site web portfolio', timestamp: Date.now() - 475200000 }
-      ],
-      connections: []
-    },
-    {
-      id: 'family',
-      emoji: '👨‍👩‍👧‍👦',
-      name: 'Famille',
-      importance: 3,
-      color: '#8b5cf6',
-      x: 0, y: 0,
-      customPosition: null,
-      notes: [
-        { id: 8, type: 'photo', title: 'Vacances', content: 'Photos vacances été', timestamp: Date.now() - 561600000 }
-      ],
-      connections: []
-    },
-    {
-      id: 'health',
-      emoji: '🏃‍♀️',
-      name: 'Santé',
-      importance: 4,
-      color: '#10b981',
-      x: 0, y: 0,
-      customPosition: null,
-      notes: [
-        { id: 9, type: 'voice', title: 'RDV médecin', content: 'RDV médecin mardi 10h', timestamp: Date.now() - 648000000 }
-      ],
-      connections: []
-    },
-    {
-      id: 'creative',
-      emoji: '🎨',
-      name: 'Créatif',
-      importance: 3,
-      color: '#f97316',
-      x: 0, y: 0,
-      customPosition: null,
-      notes: [
-        { id: 10, type: 'text', title: 'Design logo', content: 'Nouveau logo pour client', timestamp: Date.now() - 734400000 }
-      ],
-      connections: []
-    },
-    {
-      id: 'meetings',
-      emoji: '👥',
-      name: 'Réunions',
-      importance: 4,
-      color: '#06b6d4',
-      x: 0, y: 0,
-      customPosition: null,
-      notes: [
-        { id: 11, type: 'voice', title: 'Call client', content: 'Appel client projet X', timestamp: Date.now() - 820800000 }
-      ],
-      connections: []
+      folders: []
     }
   ], []);
 
-  // Initialisation des données
+  // Initialisation
   useEffect(() => {
     const saved = localStorage.getItem('mindmap-categories');
     const savedPositions = localStorage.getItem('mindmap-positions');
+    const savedExpanded = localStorage.getItem('mindmap-folders-expanded');
 
     if (saved) {
       setCategories(JSON.parse(saved));
@@ -211,15 +139,18 @@ const MindMapNotes = () => {
     }
 
     if (savedPositions) {
-      setCategoryPositions(JSON.parse(savedPositions));
+      setBallPositions(JSON.parse(savedPositions));
+    }
+
+    if (savedExpanded) {
+      setExpandedFolders(JSON.parse(savedExpanded));
     }
 
     const updateStageSize = () => {
       if (containerRef.current) {
-        const container = containerRef.current;
         setStageSize({
-          width: container.offsetWidth,
-          height: container.offsetHeight
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight
         });
       }
     };
@@ -229,73 +160,74 @@ const MindMapNotes = () => {
     return () => window.removeEventListener('resize', updateStageSize);
   }, [initialCategories]);
 
-  // Sauvegarder les données à chaque changement
+  // Sauvegarde
   useEffect(() => {
     if (categories.length > 0) {
       localStorage.setItem('mindmap-categories', JSON.stringify(categories));
     }
   }, [categories]);
 
-  // Sauvegarder les positions à chaque changement
   useEffect(() => {
-    if (Object.keys(categoryPositions).length > 0) {
-      localStorage.setItem('mindmap-positions', JSON.stringify(categoryPositions));
+    if (Object.keys(ballPositions).length > 0) {
+      localStorage.setItem('mindmap-positions', JSON.stringify(ballPositions));
     }
-  }, [categoryPositions]);
+  }, [ballPositions]);
 
-  // Initialiser les positions automatiques seulement pour les nouvelles catégories
   useEffect(() => {
+    localStorage.setItem('mindmap-folders-expanded', JSON.stringify(expandedFolders));
+  }, [expandedFolders]);
+
+  // Calcul des positions par défaut SEULEMENT pour les nouvelles boules
+  const getDefaultPosition = (categoryId, index) => {
     const centerX = stageSize.width / 2;
     const centerY = stageSize.height / 2;
     const radius = Math.min(stageSize.width, stageSize.height) * 0.3;
+    const totalCategories = categories.length;
+
+    if (viewMode === 'list') {
+      return { x: centerX, y: 100 + index * 120 };
+    }
+
+    const angle = (index * 2 * Math.PI) / totalCategories;
+    return {
+      x: centerX + Math.cos(angle) * radius,
+      y: centerY + Math.sin(angle) * radius
+    };
+  };
+
+  // Positions finales des boules
+  const finalBallPositions = useMemo(() => {
+    const positions = {};
 
     categories.forEach((category, index) => {
-      // Ne calculer position que si elle n'existe pas déjà
-      if (!categoryPositions[category.id]) {
-        const angle = (index * 2 * Math.PI) / categories.length;
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
-
-        setCategoryPositions(prev => ({
-          ...prev,
-          [category.id]: {
-            x: viewMode === 'list' ? centerX : x,
-            y: viewMode === 'list' ? 100 + index * 120 : y
-          }
-        }));
+      if (ballPositions[category.id]) {
+        // Position sauvegardée
+        positions[category.id] = ballPositions[category.id];
+      } else {
+        // Position par défaut
+        positions[category.id] = getDefaultPosition(category.id, index);
       }
     });
-  }, [categories.length, stageSize.width, stageSize.height, viewMode]);
 
-  // Calculer les données finales pour le rendu (memoization sur les positions stables)
-  const finalCategoryData = useMemo(() => {
-    return categories.map((category) => {
-      const position = categoryPositions[category.id] || { x: 400, y: 300 };
+    return positions;
+  }, [categories, ballPositions, stageSize, viewMode]);
 
-      return {
-        ...category,
-        finalX: position.x,
-        finalY: position.y,
-        size: viewMode === 'list' ? 60 : (30 + category.importance * 8) * (globalSize / 100)
-      };
-    });
-  }, [categories, categoryPositions, globalSize, viewMode]);
-
-  // Gestion du drag individuel - mise à jour directe des positions
-  const handleCategoryDragEnd = useCallback((categoryId, newPos) => {
-    setCategoryPositions(prev => ({
+  // Gestion du drag des boules - SIMPLE et DIRECTE
+  const handleBallDragEnd = (categoryId, e) => {
+    setBallPositions(prev => ({
       ...prev,
       [categoryId]: {
-        x: newPos.x,
-        y: newPos.y
+        x: e.target.x(),
+        y: e.target.y()
       }
     }));
-  }, []);
+  };
 
-  // Gestion zoom optimisée
+  // Gestion zoom - SANS interférer avec les positions des boules
   const handleWheel = useCallback((e) => {
-    e.evt.preventDefault();
+    if (isDragging) return; // Pas de zoom pendant le drag
 
+    e.evt.preventDefault();
     const scaleBy = 1.05;
     const stage = e.target.getStage();
     const oldScale = stage.scaleX();
@@ -316,7 +248,7 @@ const MindMapNotes = () => {
       y: pointer.y - mousePointTo.y * clampedScale,
     };
     setPanOffset(newPos);
-  }, []);
+  }, [isDragging]);
 
   // Notifications
   const showNotification = useCallback((message, type = 'info') => {
@@ -324,7 +256,99 @@ const MindMapNotes = () => {
     setTimeout(() => setNotification(null), 3000);
   }, []);
 
-  // Gestion des enregistrements vocaux
+  // Fonctions de gestion des notes et dossiers
+  const addNoteToCategory = useCallback((categoryId, type, title, content, folderId = null) => {
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          notes: [
+            {
+              id: Date.now(),
+              type,
+              title,
+              content,
+              timestamp: Date.now(),
+              folderId
+            },
+            ...cat.notes
+          ]
+        };
+      }
+      return cat;
+    }));
+  }, []);
+
+  const createFolder = (categoryId, folderName) => {
+    const newFolder = {
+      id: `folder-${Date.now()}`,
+      name: folderName,
+      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+    };
+
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          folders: [...(cat.folders || []), newFolder]
+        };
+      }
+      return cat;
+    }));
+
+    showNotification('Dossier créé!', 'success');
+  };
+
+  const moveNoteToFolder = (categoryId, noteId, folderId) => {
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          notes: cat.notes.map(note =>
+            note.id === noteId ? { ...note, folderId } : note
+          )
+        };
+      }
+      return cat;
+    }));
+  };
+
+  const moveNoteToCategoryFromDrag = (noteId, sourceCategoryId, targetCategoryId) => {
+    let noteToMove = null;
+
+    // Trouver et supprimer la note de la catégorie source
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === sourceCategoryId) {
+        const note = cat.notes.find(n => n.id === noteId);
+        if (note) {
+          noteToMove = { ...note, folderId: null }; // Reset folder when moving
+          return {
+            ...cat,
+            notes: cat.notes.filter(n => n.id !== noteId)
+          };
+        }
+      }
+      return cat;
+    }));
+
+    // Ajouter la note à la catégorie cible
+    if (noteToMove) {
+      setTimeout(() => {
+        setCategories(prev => prev.map(cat => {
+          if (cat.id === targetCategoryId) {
+            return {
+              ...cat,
+              notes: [noteToMove, ...cat.notes]
+            };
+          }
+          return cat;
+        }));
+        showNotification('Note déplacée vers ' + targetCategoryId, 'success');
+      }, 100);
+    }
+  };
+
+  // Fonctions d'enregistrement
   const startRecording = async () => {
     if (!selectedCategory) {
       showNotification('Sélectionnez d\'abord une catégorie', 'error');
@@ -364,68 +388,6 @@ const MindMapNotes = () => {
     }
   };
 
-  // Ajouter une note à une catégorie
-  const addNoteToCategory = useCallback((categoryId, type, title, content, folderId = null) => {
-    setCategories(prev => prev.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          notes: [
-            {
-              id: Date.now(),
-              type,
-              title,
-              content,
-              timestamp: Date.now(),
-              folderId
-            },
-            ...cat.notes
-          ]
-        };
-      }
-      return cat;
-    }));
-  }, []);
-
-  // Créer un nouveau dossier
-  const createFolder = (categoryId, folderName) => {
-    const newFolder = {
-      id: `folder-${Date.now()}`,
-      name: folderName,
-      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
-    };
-
-    setCategories(prev => prev.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          folders: [...(cat.folders || []), newFolder]
-        };
-      }
-      return cat;
-    }));
-
-    showNotification('Dossier créé!', 'success');
-  };
-
-  // Déplacer une note vers un dossier
-  const moveNoteToFolder = (categoryId, noteId, folderId) => {
-    setCategories(prev => prev.map(cat => {
-      if (cat.id === categoryId) {
-        return {
-          ...cat,
-          notes: cat.notes.map(note =>
-            note.id === noteId ? { ...note, folderId } : note
-          )
-        };
-      }
-      return cat;
-    }));
-
-    showNotification('Note déplacée dans le dossier!', 'success');
-  };
-
-  // Ajouter une note texte
   const addTextNote = () => {
     if (!selectedCategory) {
       showNotification('Sélectionnez d\'abord une catégorie', 'error');
@@ -444,7 +406,6 @@ const MindMapNotes = () => {
     }
   };
 
-  // Ouvrir l'éditeur riche
   const openRichEditor = (note = null) => {
     setEditingNote(note);
     setShowRichEditor(true);
@@ -452,7 +413,6 @@ const MindMapNotes = () => {
 
   const saveRichNote = (noteData) => {
     if (editingNote) {
-      // Modifier note existante
       setCategories(prev => prev.map(cat => ({
         ...cat,
         notes: cat.notes.map(note =>
@@ -461,7 +421,6 @@ const MindMapNotes = () => {
       })));
       showNotification('Note modifiée!', 'success');
     } else {
-      // Nouvelle note
       addNoteToCategory(selectedCategory, 'rich', noteData.title, noteData.content);
       showNotification('Note enrichie ajoutée!', 'success');
     }
@@ -469,7 +428,6 @@ const MindMapNotes = () => {
     setEditingNote(null);
   };
 
-  // Upload photo
   const handlePhotoUpload = (event) => {
     if (!selectedCategory) {
       showNotification('Sélectionnez d\'abord une catégorie', 'error');
@@ -489,86 +447,6 @@ const MindMapNotes = () => {
     event.target.value = '';
   };
 
-
-  // Rendu des bulles optimisé
-  const renderCategories = useMemo(() => {
-    return finalCategoryData.map((category) => {
-      const isSelected = selectedCategory === category.id;
-
-      return (
-        <Group
-          key={category.id}
-          x={category.finalX}
-          y={category.finalY}
-          draggable={true}
-          onDragEnd={(e) => {
-            handleCategoryDragEnd(category.id, {
-              x: e.target.x(),
-              y: e.target.y()
-            });
-          }}
-          onClick={() => setSelectedCategory(category.id)}
-          onTap={() => setSelectedCategory(category.id)}
-        >
-          {/* Cercle principal */}
-          <Circle
-            radius={category.size}
-            fill={category.color}
-            stroke={isSelected ? themes[currentTheme].accent : 'transparent'}
-            strokeWidth={isSelected ? 4 : 0}
-            shadowBlur={isSelected ? 20 : 10}
-            shadowColor={category.color}
-            shadowOpacity={isSelected ? 0.6 : 0.3}
-          />
-
-          {/* Cercle interne avec effet */}
-          <Circle
-            radius={category.size * 0.8}
-            fill={`linear-gradient(45deg, ${category.color}80, ${category.color}40)`}
-            opacity={0.7}
-          />
-
-          {/* Texte emoji */}
-          <Text
-            text={category.emoji}
-            fontSize={category.size * 0.6}
-            x={-category.size * 0.3}
-            y={-category.size * 0.3}
-            fill={themes[currentTheme].text}
-          />
-
-          {/* Nom de la catégorie */}
-          <Text
-            text={category.name}
-            fontSize={Math.max(12, category.size * 0.2)}
-            x={-category.size}
-            y={category.size + 10}
-            width={category.size * 2}
-            align="center"
-            fill={themes[currentTheme].text}
-            fontStyle="bold"
-          />
-
-          {/* Nombre de notes */}
-          <Circle
-            x={category.size * 0.7}
-            y={-category.size * 0.7}
-            radius={12}
-            fill={themes[currentTheme].accent}
-          />
-          <Text
-            text={category.notes?.length || 0}
-            fontSize={10}
-            x={category.size * 0.7 - 6}
-            y={-category.size * 0.7 - 5}
-            fill={themes[currentTheme].text}
-            fontStyle="bold"
-          />
-        </Group>
-      );
-    });
-  }, [finalCategoryData, selectedCategory, themes, currentTheme, handleCategoryDragEnd]);
-
   const theme = themes[currentTheme];
 
   return (
@@ -577,10 +455,9 @@ const MindMapNotes = () => {
       style={{ background: theme.bg }}
       ref={containerRef}
     >
-      {/* Barre de contrôles thèmes et modes */}
+      {/* Contrôles thèmes */}
       <div className="absolute top-4 right-4 z-40">
         <div className="flex items-center gap-2 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-3 shadow-2xl">
-          {/* Sélecteur de thème */}
           <select
             value={currentTheme}
             onChange={(e) => setCurrentTheme(e.target.value)}
@@ -592,7 +469,6 @@ const MindMapNotes = () => {
             <option value="forest">🌲 Forest</option>
           </select>
 
-          {/* Vue mode */}
           <button
             onClick={() => setViewMode(viewMode === 'mindmap' ? 'list' : 'mindmap')}
             className="p-2 bg-black/30 text-white rounded-lg border border-white/20 backdrop-blur-sm hover:bg-black/50 transition-all"
@@ -606,7 +482,6 @@ const MindMapNotes = () => {
       <div className="absolute left-4 top-4 z-30 space-y-3">
         <div className="bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl">
           <div className="flex flex-col gap-3">
-            {/* Taille globale */}
             <div className="text-white text-sm">
               <label className="block mb-2">Taille: {globalSize}%</label>
               <input
@@ -619,8 +494,6 @@ const MindMapNotes = () => {
               />
             </div>
 
-
-            {/* Tri */}
             <select
               value={sortMode}
               onChange={(e) => setSortMode(e.target.value)}
@@ -635,11 +508,13 @@ const MindMapNotes = () => {
         </div>
       </div>
 
-      {/* Panel info droite */}
+      {/* Panel info droite avec dossiers */}
       {selectedCategory && (
         <div className="absolute right-4 top-4 bottom-24 w-80 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl z-30 overflow-hidden">
           {(() => {
             const category = categories.find(c => c.id === selectedCategory);
+            if (!category) return null;
+
             return (
               <div className="h-full flex flex-col">
                 <div className="flex items-center justify-between mb-4">
@@ -652,7 +527,7 @@ const MindMapNotes = () => {
                   </div>
                 </div>
 
-                {/* Bouton créer dossier */}
+                {/* Créer dossier */}
                 <div className="mb-4">
                   {!showCreateFolder ? (
                     <button
@@ -696,106 +571,99 @@ const MindMapNotes = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-3">
-                  {/* Affichage des dossiers */}
+                  {/* Dossiers avec expand/collapse */}
                   {category.folders?.map((folder) => {
                     const folderNotes = category.notes?.filter(note => note.folderId === folder.id) || [];
-                    if (folderNotes.length === 0) return null;
+                    const isExpanded = expandedFolders[folder.id] !== false; // Par défaut ouvert
 
                     return (
-                      <div key={folder.id} className="bg-black/30 rounded-xl border border-white/10">
+                      <div
+                        key={folder.id}
+                        className="bg-black/30 rounded-xl border border-white/10"
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                          if (dragData.type === 'note') {
+                            moveNoteToFolder(category.id, dragData.noteId, folder.id);
+                            showNotification(`Note déplacée dans ${folder.name}`, 'success');
+                          }
+                        }}
+                        onDragOver={(e) => e.preventDefault()}
+                      >
                         <div
-                          className="flex items-center gap-2 p-3 border-b border-white/10"
+                          className="flex items-center gap-2 p-3 cursor-pointer hover:bg-black/20 transition-all"
                           style={{ borderLeftColor: folder.color, borderLeftWidth: '4px' }}
+                          onClick={() => setExpandedFolders(prev => ({ ...prev, [folder.id]: !isExpanded }))}
                         >
-                          <span className="text-lg">📁</span>
-                          <span className="text-white font-medium text-sm">{folder.name}</span>
-                          <span className="text-gray-400 text-xs ml-auto">({folderNotes.length})</span>
+                          <span className="text-lg">{isExpanded ? '📂' : '📁'}</span>
+                          <span className="text-white font-medium text-sm flex-1">{folder.name}</span>
+                          <span className="text-gray-400 text-xs">({folderNotes.length})</span>
+                          <span className="text-gray-400 text-xs">{isExpanded ? '▼' : '▶'}</span>
                         </div>
 
-                        <div className="p-2 space-y-2">
-                          {folderNotes.map((note, index) => (
-                            <div
-                              key={note.id}
-                              className="bg-black/20 rounded-lg p-2 border border-white/5 hover:border-white/20 transition-all cursor-pointer text-xs"
-                              onClick={() => openRichEditor(note)}
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm">
-                                  {note.type === 'voice' ? '🎤' :
-                                   note.type === 'photo' ? '📷' : '📝'}
-                                </span>
-                                <span className="text-white font-medium truncate">{note.title}</span>
+                        {isExpanded && (
+                          <div className="p-2 space-y-2 border-t border-white/5">
+                            {folderNotes.map((note) => (
+                              <div
+                                key={note.id}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', JSON.stringify({
+                                    type: 'note',
+                                    noteId: note.id,
+                                    categoryId: category.id
+                                  }));
+                                }}
+                                className="bg-black/20 rounded-lg p-2 border border-white/5 hover:border-white/20 transition-all cursor-pointer text-xs group"
+                                onClick={() => openRichEditor(note)}
+                              >
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-sm">
+                                    {note.type === 'voice' ? '🎤' :
+                                     note.type === 'photo' ? '📷' : '📝'}
+                                  </span>
+                                  <span className="text-white font-medium truncate flex-1">{note.title}</span>
+                                  <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    ⋮⋮
+                                  </span>
+                                </div>
+                                <p className="text-gray-400 text-xs truncate">
+                                  {new Date(note.timestamp).toLocaleString()}
+                                </p>
                               </div>
-                              <p className="text-gray-400 text-xs truncate">
-                                {new Date(note.timestamp).toLocaleString()}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
 
                   {/* Notes sans dossier */}
-                  {category.notes?.filter(note => !note.folderId).map((note, index) => (
+                  {category.notes?.filter(note => !note.folderId).map((note) => (
                     <div
                       key={note.id}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/plain', JSON.stringify({
+                          type: 'note',
                           noteId: note.id,
-                          categoryId: category.id,
-                          sourceIndex: index
+                          categoryId: category.id
                         }));
-                        e.currentTarget.style.opacity = '0.5';
                       }}
-                      onDragEnd={(e) => {
-                        e.currentTarget.style.opacity = '1';
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.style.borderColor = '#06d6a0';
-                      }}
-                      onDragLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-
-                        const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                        const targetIndex = index;
-
-                        if (dragData.sourceIndex !== targetIndex) {
-                          // Réorganiser les notes dans la même catégorie
-                          setCategories(prev => prev.map(cat => {
-                            if (cat.id === category.id) {
-                              const newNotes = [...cat.notes];
-                              const [movedNote] = newNotes.splice(dragData.sourceIndex, 1);
-                              newNotes.splice(targetIndex, 0, movedNote);
-                              return { ...cat, notes: newNotes };
-                            }
-                            return cat;
-                          }));
-                          showNotification('Note déplacée!', 'success');
-                        }
-                      }}
-                      className="bg-black/20 rounded-xl p-3 border border-white/10 hover:border-white/20 transition-all cursor-grab active:cursor-grabbing group"
+                      className="bg-black/20 rounded-xl p-3 border border-white/10 hover:border-white/20 transition-all cursor-pointer group"
                       onClick={() => openRichEditor(note)}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">
                             {note.type === 'voice' ? '🎤' :
-                             note.type === 'photo' ? '📷' :
-                             note.type === 'rich' ? '📝' : '📝'}
+                             note.type === 'photo' ? '📷' : '📝'}
                           </span>
                           <span className="text-white font-medium text-sm truncate">
                             {note.title}
                           </span>
                         </div>
                         <div className="flex items-center gap-1">
-                          {/* Menu dossier */}
                           {category.folders && category.folders.length > 0 && (
                             <select
                               value={note.folderId || ''}
@@ -813,7 +681,7 @@ const MindMapNotes = () => {
                             </select>
                           )}
                           <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                            ⣿⣿ Glisser
+                            ⋮⋮
                           </span>
                         </div>
                       </div>
@@ -844,7 +712,7 @@ const MindMapNotes = () => {
         </div>
       )}
 
-      {/* Canvas principal */}
+      {/* Canvas principal - SIMPLE */}
       <div className="absolute inset-0 pb-20">
         <Stage
           width={stageSize.width}
@@ -864,7 +732,99 @@ const MindMapNotes = () => {
           }}
         >
           <Layer>
-            {renderCategories}
+            {categories.map((category, index) => {
+              const position = finalBallPositions[category.id] || { x: 400, y: 300 };
+              const isSelected = selectedCategory === category.id;
+              const size = (30 + category.importance * 8) * (globalSize / 100);
+
+              return (
+                <Group
+                  key={category.id}
+                  x={position.x}
+                  y={position.y}
+                  draggable={true}
+                  onDragStart={() => setIsDragging(true)}
+                  onDragEnd={(e) => {
+                    setIsDragging(false);
+                    handleBallDragEnd(category.id, e);
+                  }}
+                  onClick={(e) => {
+                    e.cancelBubble = true; // Empêcher la propagation
+                    setSelectedCategory(category.id);
+                  }}
+                  onTap={(e) => {
+                    e.cancelBubble = true;
+                    setSelectedCategory(category.id);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    try {
+                      const dragData = JSON.parse(e.dataTransfer?.getData('text/plain') || '{}');
+                      if (dragData.type === 'note' && dragData.categoryId !== category.id) {
+                        moveNoteToCategoryFromDrag(dragData.noteId, dragData.categoryId, category.id);
+                      }
+                    } catch (err) {
+                      console.log('Drop ignored');
+                    }
+                  }}
+                >
+                  {/* Cercle principal */}
+                  <Circle
+                    radius={size}
+                    fill={category.color}
+                    stroke={isSelected ? theme.accent : 'transparent'}
+                    strokeWidth={isSelected ? 4 : 0}
+                    shadowBlur={isSelected ? 20 : 10}
+                    shadowColor={category.color}
+                    shadowOpacity={isSelected ? 0.6 : 0.3}
+                  />
+
+                  {/* Cercle interne */}
+                  <Circle
+                    radius={size * 0.8}
+                    fill={category.color}
+                    opacity={0.7}
+                  />
+
+                  {/* Emoji */}
+                  <Text
+                    text={category.emoji}
+                    fontSize={size * 0.6}
+                    x={-size * 0.3}
+                    y={-size * 0.3}
+                    fill={theme.text}
+                  />
+
+                  {/* Nom */}
+                  <Text
+                    text={category.name}
+                    fontSize={Math.max(12, size * 0.2)}
+                    x={-size}
+                    y={size + 10}
+                    width={size * 2}
+                    align="center"
+                    fill={theme.text}
+                    fontStyle="bold"
+                  />
+
+                  {/* Compteur */}
+                  <Circle
+                    x={size * 0.7}
+                    y={-size * 0.7}
+                    radius={12}
+                    fill={theme.accent}
+                  />
+                  <Text
+                    text={category.notes?.length || 0}
+                    fontSize={10}
+                    x={size * 0.7 - 6}
+                    y={-size * 0.7 - 5}
+                    fill={theme.text}
+                    fontStyle="bold"
+                  />
+                </Group>
+              );
+            })}
           </Layer>
         </Stage>
       </div>
@@ -872,7 +832,6 @@ const MindMapNotes = () => {
       {/* Boutons d'action */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-40">
         <div className="flex items-center gap-4">
-          {/* Note texte */}
           <button
             onClick={addTextNote}
             className="flex items-center justify-center w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl shadow-2xl transition-all hover:scale-110 border border-blue-400/30"
@@ -881,7 +840,6 @@ const MindMapNotes = () => {
             <Type size={24} />
           </button>
 
-          {/* Note vocale */}
           <button
             onClick={isRecording ? stopRecording : startRecording}
             className={`flex items-center justify-center w-16 h-16 rounded-2xl shadow-2xl transition-all hover:scale-110 border ${
@@ -894,7 +852,6 @@ const MindMapNotes = () => {
             {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
           </button>
 
-          {/* Photo */}
           <label className="flex items-center justify-center w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-2xl shadow-2xl transition-all hover:scale-110 cursor-pointer border border-green-400/30">
             <ImageIcon size={24} />
             <input
