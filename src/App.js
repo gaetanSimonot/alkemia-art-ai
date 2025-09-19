@@ -8,8 +8,8 @@ function App() {
   return (
     <Router>
       <div className="App">
-        {/* Navigation intégrée et responsive */}
-        <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+        {/* Header intégré - non overlay */}
+        <header className="w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10 shadow-2xl">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               {/* Logo */}
@@ -52,7 +52,7 @@ function App() {
               </div>
             </div>
           </div>
-        </nav>
+        </header>
 
         {/* Routes */}
         <Routes>

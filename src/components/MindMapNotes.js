@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Stage, Layer, Circle, Text, Group, Line } from 'react-konva';
+import { Stage, Layer, Circle, Text, Group } from 'react-konva';
 import {
-  Mic, MicOff, Type, Image as ImageIcon, Palette,
-  ZoomIn, ZoomOut, RotateCcw, Eye, EyeOff, Filter,
-  ArrowLeft, ArrowRight, Edit3, Trash2, Download,
-  List, Grid, Calendar, Star
+  Mic, MicOff, Type, Image as ImageIcon,
+  Edit3, List, Grid
 } from 'lucide-react';
 import RichNoteEditor from './RichNoteEditor';
 
@@ -15,7 +13,6 @@ const MindMapNotes = () => {
   const [viewMode, setViewMode] = useState('mindmap'); // mindmap ou list
   const [currentTheme, setCurrentTheme] = useState('dark');
   const [globalSize, setGlobalSize] = useState(100);
-  const [showConnections, setShowConnections] = useState(true);
   const [sortMode, setSortMode] = useState('importance');
 
   // États pour les interactions
@@ -25,6 +22,9 @@ const MindMapNotes = () => {
   const [textInput, setTextInput] = useState('');
   const [showRichEditor, setShowRichEditor] = useState(false);
   const [editingNote, setEditingNote] = useState(null);
+  const [folders, setFolders] = useState([]);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
 
   // États pour la navigation canvas
   const [scale, setScale] = useState(1);
@@ -92,10 +92,14 @@ const MindMapNotes = () => {
       x: 0, y: 0,
       customPosition: null,
       notes: [
-        { id: 1, type: 'voice', title: 'Réunion équipe', content: 'Réunion équipe demain 14h', timestamp: Date.now() - 86400000 },
-        { id: 2, type: 'text', title: 'Rapport projet', content: 'Finir rapport pour vendredi', timestamp: Date.now() - 43200000 }
+        { id: 1, type: 'voice', title: 'Réunion équipe', content: 'Réunion équipe demain 14h', timestamp: Date.now() - 86400000, folderId: null },
+        { id: 2, type: 'text', title: 'Rapport projet', content: 'Finir rapport pour vendredi', timestamp: Date.now() - 43200000, folderId: null }
       ],
-      connections: ['meetings', 'projects']
+      folders: [
+        { id: 'folder-1', name: 'Urgent', color: '#ff4444' },
+        { id: 'folder-2', name: 'Projets', color: '#44ff44' }
+      ],
+      connections: []
     },
     {
       id: 'personal',
@@ -109,7 +113,7 @@ const MindMapNotes = () => {
         { id: 3, type: 'photo', title: 'Courses', content: 'Photo liste courses', timestamp: Date.now() - 129600000 },
         { id: 4, type: 'text', title: 'Anniversaire', content: 'Anniversaire maman le 15', timestamp: Date.now() - 216000000 }
       ],
-      connections: ['family', 'health']
+      connections: []
     },
     {
       id: 'ideas',
@@ -123,7 +127,7 @@ const MindMapNotes = () => {
         { id: 5, type: 'voice', title: 'App mobile', content: 'Idée app mobile pour les courses', timestamp: Date.now() - 302400000 },
         { id: 6, type: 'text', title: 'Blog article', content: 'Article sur la productivité', timestamp: Date.now() - 388800000 }
       ],
-      connections: ['projects', 'creative']
+      connections: []
     },
     {
       id: 'projects',
@@ -336,7 +340,7 @@ const MindMapNotes = () => {
   };
 
   // Ajouter une note à une catégorie
-  const addNoteToCategory = useCallback((categoryId, type, title, content) => {
+  const addNoteToCategory = useCallback((categoryId, type, title, content, folderId = null) => {
     setCategories(prev => prev.map(cat => {
       if (cat.id === categoryId) {
         return {
@@ -347,7 +351,8 @@ const MindMapNotes = () => {
               type,
               title,
               content,
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              folderId
             },
             ...cat.notes
           ]
@@ -356,6 +361,44 @@ const MindMapNotes = () => {
       return cat;
     }));
   }, []);
+
+  // Créer un nouveau dossier
+  const createFolder = (categoryId, folderName) => {
+    const newFolder = {
+      id: `folder-${Date.now()}`,
+      name: folderName,
+      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+    };
+
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          folders: [...(cat.folders || []), newFolder]
+        };
+      }
+      return cat;
+    }));
+
+    showNotification('Dossier créé!', 'success');
+  };
+
+  // Déplacer une note vers un dossier
+  const moveNoteToFolder = (categoryId, noteId, folderId) => {
+    setCategories(prev => prev.map(cat => {
+      if (cat.id === categoryId) {
+        return {
+          ...cat,
+          notes: cat.notes.map(note =>
+            note.id === noteId ? { ...note, folderId } : note
+          )
+        };
+      }
+      return cat;
+    }));
+
+    showNotification('Note déplacée dans le dossier!', 'success');
+  };
 
   // Ajouter une note texte
   const addTextNote = () => {
@@ -421,32 +464,6 @@ const MindMapNotes = () => {
     event.target.value = '';
   };
 
-  // Rendu des connexions optimisé
-  const renderConnections = useMemo(() => {
-    if (!showConnections || viewMode === 'list') return [];
-
-    const connections = [];
-    categoryPositions.forEach(cat => {
-      if (cat.connections) {
-        cat.connections.forEach(connectionId => {
-          const targetCat = categoryPositions.find(c => c.id === connectionId);
-          if (targetCat) {
-            connections.push(
-              <Line
-                key={`${cat.id}-${connectionId}`}
-                points={[cat.finalX, cat.finalY, targetCat.finalX, targetCat.finalY]}
-                stroke={themes[currentTheme].accent}
-                strokeWidth={2}
-                opacity={0.3}
-                dash={[10, 5]}
-              />
-            );
-          }
-        });
-      }
-    });
-    return connections;
-  }, [categoryPositions, showConnections, viewMode, themes, currentTheme]);
 
   // Rendu des bulles optimisé
   const renderCategories = useMemo(() => {
@@ -561,7 +578,7 @@ const MindMapNotes = () => {
       </div>
 
       {/* Contrôles latéraux */}
-      <div className="absolute left-4 top-20 z-30 space-y-3">
+      <div className="absolute left-4 top-4 z-30 space-y-3">
         <div className="bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl">
           <div className="flex flex-col gap-3">
             {/* Taille globale */}
@@ -577,18 +594,6 @@ const MindMapNotes = () => {
               />
             </div>
 
-            {/* Toggle connexions */}
-            <button
-              onClick={() => setShowConnections(!showConnections)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-sm ${
-                showConnections
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                  : 'bg-gray-500/20 text-gray-300 border border-gray-500/30'
-              }`}
-            >
-              {showConnections ? <Eye size={14} /> : <EyeOff size={14} />}
-              <span className="hidden lg:inline">Connexions</span>
-            </button>
 
             {/* Tri */}
             <select
@@ -607,7 +612,7 @@ const MindMapNotes = () => {
 
       {/* Panel info droite */}
       {selectedCategory && (
-        <div className="absolute right-4 top-20 bottom-24 w-80 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl z-30 overflow-hidden">
+        <div className="absolute right-4 top-4 bottom-24 w-80 bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-2xl z-30 overflow-hidden">
           {(() => {
             const category = categories.find(c => c.id === selectedCategory);
             return (
@@ -622,11 +627,135 @@ const MindMapNotes = () => {
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {category.notes?.map((note) => (
+                {/* Bouton créer dossier */}
+                <div className="mb-4">
+                  {!showCreateFolder ? (
+                    <button
+                      onClick={() => setShowCreateFolder(true)}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/20 text-purple-300 rounded-lg border border-purple-500/30 hover:bg-purple-500/30 transition-all text-sm"
+                    >
+                      <span>📁</span>
+                      <span>Nouveau dossier</span>
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        placeholder="Nom du dossier"
+                        className="flex-1 px-3 py-2 bg-black/30 text-white rounded-lg border border-white/20 text-sm"
+                        autoFocus
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && newFolderName.trim()) {
+                            createFolder(selectedCategory, newFolderName.trim());
+                            setNewFolderName('');
+                            setShowCreateFolder(false);
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (newFolderName.trim()) {
+                            createFolder(selectedCategory, newFolderName.trim());
+                            setNewFolderName('');
+                          }
+                          setShowCreateFolder(false);
+                        }}
+                        className="px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm"
+                      >
+                        ✓
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-3">
+                  {/* Affichage des dossiers */}
+                  {category.folders?.map((folder) => {
+                    const folderNotes = category.notes?.filter(note => note.folderId === folder.id) || [];
+                    if (folderNotes.length === 0) return null;
+
+                    return (
+                      <div key={folder.id} className="bg-black/30 rounded-xl border border-white/10">
+                        <div
+                          className="flex items-center gap-2 p-3 border-b border-white/10"
+                          style={{ borderLeftColor: folder.color, borderLeftWidth: '4px' }}
+                        >
+                          <span className="text-lg">📁</span>
+                          <span className="text-white font-medium text-sm">{folder.name}</span>
+                          <span className="text-gray-400 text-xs ml-auto">({folderNotes.length})</span>
+                        </div>
+
+                        <div className="p-2 space-y-2">
+                          {folderNotes.map((note, index) => (
+                            <div
+                              key={note.id}
+                              className="bg-black/20 rounded-lg p-2 border border-white/5 hover:border-white/20 transition-all cursor-pointer text-xs"
+                              onClick={() => openRichEditor(note)}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-sm">
+                                  {note.type === 'voice' ? '🎤' :
+                                   note.type === 'photo' ? '📷' : '📝'}
+                                </span>
+                                <span className="text-white font-medium truncate">{note.title}</span>
+                              </div>
+                              <p className="text-gray-400 text-xs truncate">
+                                {new Date(note.timestamp).toLocaleString()}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Notes sans dossier */}
+                  {category.notes?.filter(note => !note.folderId).map((note, index) => (
                     <div
                       key={note.id}
-                      className="bg-black/20 rounded-xl p-3 border border-white/10 hover:border-white/20 transition-all cursor-pointer"
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', JSON.stringify({
+                          noteId: note.id,
+                          categoryId: category.id,
+                          sourceIndex: index
+                        }));
+                        e.currentTarget.style.opacity = '0.5';
+                      }}
+                      onDragEnd={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = '#06d6a0';
+                      }}
+                      onDragLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+                        const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        const targetIndex = index;
+
+                        if (dragData.sourceIndex !== targetIndex) {
+                          // Réorganiser les notes dans la même catégorie
+                          setCategories(prev => prev.map(cat => {
+                            if (cat.id === category.id) {
+                              const newNotes = [...cat.notes];
+                              const [movedNote] = newNotes.splice(dragData.sourceIndex, 1);
+                              newNotes.splice(targetIndex, 0, movedNote);
+                              return { ...cat, notes: newNotes };
+                            }
+                            return cat;
+                          }));
+                          showNotification('Note déplacée!', 'success');
+                        }
+                      }}
+                      className="bg-black/20 rounded-xl p-3 border border-white/10 hover:border-white/20 transition-all cursor-grab active:cursor-grabbing group"
                       onClick={() => openRichEditor(note)}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -638,6 +767,28 @@ const MindMapNotes = () => {
                           </span>
                           <span className="text-white font-medium text-sm truncate">
                             {note.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {/* Menu dossier */}
+                          {category.folders && category.folders.length > 0 && (
+                            <select
+                              value={note.folderId || ''}
+                              onChange={(e) => {
+                                const folderId = e.target.value || null;
+                                moveNoteToFolder(category.id, note.id, folderId);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs bg-black/30 text-gray-300 border border-white/20 rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <option value="">Sans dossier</option>
+                              {category.folders.map(folder => (
+                                <option key={folder.id} value={folder.id}>📁 {folder.name}</option>
+                              ))}
+                            </select>
+                          )}
+                          <span className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                            ⣿⣿ Glisser
                           </span>
                         </div>
                       </div>
@@ -669,7 +820,7 @@ const MindMapNotes = () => {
       )}
 
       {/* Canvas principal */}
-      <div className="absolute inset-0 pt-16 pb-20">
+      <div className="absolute inset-0 pb-20">
         <Stage
           width={stageSize.width}
           height={stageSize.height}
@@ -688,7 +839,6 @@ const MindMapNotes = () => {
           }}
         >
           <Layer>
-            {renderConnections}
             {renderCategories}
           </Layer>
         </Stage>

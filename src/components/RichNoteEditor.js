@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight,
-  List, ListOrdered, Save, X, Type, Palette, Link, Image
+  List, ListOrdered, Save, X, Type, Palette, Link, Image,
+  Share2, Mail, MessageCircle, Copy, Download
 } from 'lucide-react';
 
 const RichNoteEditor = ({ note, onSave, onClose, categoryColor }) => {
@@ -9,6 +10,7 @@ const RichNoteEditor = ({ note, onSave, onClose, categoryColor }) => {
   const [title, setTitle] = useState(note?.title || 'Sans titre');
   const [fontSize, setFontSize] = useState(16);
   const [textColor, setTextColor] = useState('#333333');
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const editorRef = useRef(null);
 
   useEffect(() => {
@@ -65,6 +67,57 @@ const RichNoteEditor = ({ note, onSave, onClose, categoryColor }) => {
     execCommand('foreColor', color);
   };
 
+  // Fonctions de partage
+  const getPlainText = () => {
+    return editorRef.current.innerText || editorRef.current.textContent || '';
+  };
+
+  const shareViaEmail = () => {
+    const plainText = getPlainText();
+    const subject = encodeURIComponent(title);
+    const body = encodeURIComponent(plainText);
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  };
+
+  const shareViaWhatsApp = () => {
+    const plainText = getPlainText();
+    const text = encodeURIComponent(`*${title}*\n\n${plainText}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
+  const copyToClipboard = async () => {
+    const plainText = getPlainText();
+    const textToCopy = `${title}\n\n${plainText}`;
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      alert('Texte copié dans le presse-papier!');
+    } catch (err) {
+      // Fallback pour les navigateurs qui ne supportent pas l'API clipboard
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Texte copié dans le presse-papier!');
+    }
+  };
+
+  const downloadAsText = () => {
+    const plainText = getPlainText();
+    const content = `${title}\n\n${plainText}`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
@@ -82,6 +135,51 @@ const RichNoteEditor = ({ note, onSave, onClose, categoryColor }) => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Bouton partage */}
+            <div className="relative">
+              <button
+                onClick={() => setShowShareMenu(!showShareMenu)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all"
+              >
+                <Share2 size={16} />
+                <span>Partager</span>
+              </button>
+
+              {/* Menu partage */}
+              {showShareMenu && (
+                <div className="absolute right-0 top-12 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50 min-w-48">
+                  <button
+                    onClick={() => {shareViaEmail(); setShowShareMenu(false);}}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-all w-full text-left text-gray-700"
+                  >
+                    <Mail size={16} />
+                    <span>Email</span>
+                  </button>
+                  <button
+                    onClick={() => {shareViaWhatsApp(); setShowShareMenu(false);}}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-all w-full text-left text-gray-700"
+                  >
+                    <MessageCircle size={16} />
+                    <span>WhatsApp</span>
+                  </button>
+                  <button
+                    onClick={() => {copyToClipboard(); setShowShareMenu(false);}}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-all w-full text-left text-gray-700"
+                  >
+                    <Copy size={16} />
+                    <span>Copier</span>
+                  </button>
+                  <button
+                    onClick={() => {downloadAsText(); setShowShareMenu(false);}}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-all w-full text-left text-gray-700"
+                  >
+                    <Download size={16} />
+                    <span>Télécharger</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleSave}
               className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all"
