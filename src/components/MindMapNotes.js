@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
   Mic, MicOff, Type, Share2, Plus, X, Folder, File,
   ChevronRight, ChevronDown, Edit3, Trash2, Save, FolderPlus,
-  Bold, Italic, Underline, List, AlignLeft, Link2
+  Bold, Italic, Underline, List, AlignLeft, Link2, Mail, Upload
 } from 'lucide-react';
 
 const MindMapNotes = () => {
@@ -204,6 +204,79 @@ const MindMapNotes = () => {
   }, [draggedBall, ballPositions]);
 
   // Fonctions utilitaires - DÉPLACÉ EN PREMIER
+  const autoBackup = useCallback(() => {
+    const backupData = {
+      categories,
+      ballPositions,
+      timestamp: new Date().toISOString(),
+      version: '1.0'
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], {
+      type: 'application/json'
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mindmap-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [categories, ballPositions]);
+
+  const emailBackup = useCallback(() => {
+    const backupData = {
+      categories,
+      ballPositions,
+      timestamp: new Date().toISOString(),
+      version: '1.0'
+    };
+
+    const jsonData = JSON.stringify(backupData, null, 2);
+    const encodedData = encodeURIComponent(jsonData);
+    const timestamp = new Date().toLocaleDateString('fr-FR');
+
+    const subject = `Backup MindMap - ${timestamp}`;
+    const body = `Voici votre backup MindMap du ${timestamp}.\n\nPour restaurer :\n1. Copiez le contenu JSON ci-dessous\n2. Utilisez le bouton "Importer Backup" dans l'application\n\nDonnées JSON :\n\n${jsonData}`;
+
+    const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailto);
+
+    showNotification('Email de backup ouvert !', 'success');
+  }, [categories, ballPositions, showNotification]);
+
+  const importBackup = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const backupData = JSON.parse(e.target.result);
+
+        if (backupData.categories) {
+          setCategories(backupData.categories);
+          localStorage.setItem('mindmap-categories', JSON.stringify(backupData.categories));
+        }
+
+        if (backupData.ballPositions) {
+          setBallPositions(backupData.ballPositions);
+          localStorage.setItem('mindmap-ball-positions', JSON.stringify(backupData.ballPositions));
+        }
+
+        showNotification('Backup restauré avec succès !', 'success');
+      } catch (error) {
+        showNotification('Erreur lors de la restauration du backup', 'error');
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input for allowing same file selection again
+    event.target.value = '';
+  }, [showNotification]);
+
   const showNotification = useCallback((message, type = 'info') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3000);
@@ -301,6 +374,18 @@ const MindMapNotes = () => {
       setBallPositions(JSON.parse(savedBallPositions));
     }
   }, [initialCategories]);
+
+  // Auto-backup whenever categories change
+  useEffect(() => {
+    if (categories.length > 0) {
+      localStorage.setItem('mindmap-categories', JSON.stringify(categories));
+      // Trigger auto-backup after a delay to avoid too frequent downloads
+      const timeoutId = setTimeout(() => {
+        autoBackup();
+      }, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [categories, autoBackup]);
 
   // Autres fonctions utilitaires
 
@@ -554,21 +639,53 @@ const MindMapNotes = () => {
             </h1>
           </div>
 
-          <select
-            value={currentTheme}
-            onChange={(e) => setCurrentTheme(e.target.value)}
-            className="px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm transition-all hover:scale-105"
-            style={{
-              backgroundColor: theme.surface,
-              color: theme.text,
-              border: `1px solid ${theme.border}`
-            }}
-          >
-            <option value="dark">🌙 Sombre</option>
-            <option value="ocean">🌊 Océan</option>
-            <option value="sunset">🌅 Coucher</option>
-            <option value="forest">🌲 Forêt</option>
-          </select>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={emailBackup}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm transition-all hover:scale-105 hover:shadow-lg"
+              style={{
+                backgroundColor: theme.primary,
+                color: theme.text,
+                border: `1px solid ${theme.border}`
+              }}
+            >
+              <Mail size={16} />
+              📧 Backup
+            </button>
+
+            <label className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm transition-all hover:scale-105 hover:shadow-lg cursor-pointer"
+              style={{
+                backgroundColor: theme.secondary,
+                color: theme.text,
+                border: `1px solid ${theme.border}`
+              }}
+            >
+              <Upload size={16} />
+              Importer
+              <input
+                type="file"
+                accept=".json"
+                onChange={importBackup}
+                className="hidden"
+              />
+            </label>
+
+            <select
+              value={currentTheme}
+              onChange={(e) => setCurrentTheme(e.target.value)}
+              className="px-4 py-2 rounded-xl text-sm font-medium backdrop-blur-sm transition-all hover:scale-105"
+              style={{
+                backgroundColor: theme.surface,
+                color: theme.text,
+                border: `1px solid ${theme.border}`
+              }}
+            >
+              <option value="dark">🌙 Sombre</option>
+              <option value="ocean">🌊 Océan</option>
+              <option value="sunset">🌅 Coucher</option>
+              <option value="forest">🌲 Forêt</option>
+            </select>
+          </div>
         </div>
 
       </div>
