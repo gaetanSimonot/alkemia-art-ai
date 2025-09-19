@@ -8,32 +8,49 @@ function App() {
   return (
     <Router>
       <div className="App">
-        {/* Navigation Responsive */}
-        <nav className="fixed top-4 left-4 right-4 md:right-auto z-50">
-          <div className="flex items-center justify-between md:justify-start gap-2 md:gap-3 p-2 md:p-3 bg-black/20 backdrop-blur-lg rounded-2xl border border-white/20">
-            <Link
-              to="/"
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-white text-xs md:text-sm font-semibold"
-            >
-              <Home size={16} className="md:w-[18px] md:h-[18px]" />
-              <span className="hidden sm:inline">Accueil</span>
-            </Link>
+        {/* Navigation intégrée et responsive */}
+        <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-slate-900/95 via-slate-800/95 to-slate-900/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              {/* Logo */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-lg">🎨</span>
+                </div>
+                <div className="hidden sm:block">
+                  <h1 className="text-white font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    Alkemia Art Tool
+                  </h1>
+                </div>
+              </div>
 
-            <Link
-              to="/mindmap"
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-white text-xs md:text-sm font-semibold"
-            >
-              <Brain size={16} className="md:w-[18px] md:h-[18px]" />
-              <span className="hidden sm:inline">Mind Map</span>
-            </Link>
+              {/* Navigation */}
+              <div className="flex items-center space-x-1">
+                <Link
+                  to="/"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-all text-white text-sm font-medium group"
+                >
+                  <Home size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline">Accueil</span>
+                </Link>
 
-            <Link
-              to="/banner-editor"
-              className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 rounded-xl hover:bg-white/10 transition-all text-white text-xs md:text-sm font-semibold"
-            >
-              <Palette size={16} className="md:w-[18px] md:h-[18px]" />
-              <span className="hidden sm:inline">Éditeur</span>
-            </Link>
+                <Link
+                  to="/mindmap"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-all text-white text-sm font-medium group"
+                >
+                  <Brain size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline">Mind Map</span>
+                </Link>
+
+                <Link
+                  to="/banner-editor"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-all text-white text-sm font-medium group"
+                >
+                  <Palette size={18} className="group-hover:scale-110 transition-transform" />
+                  <span className="hidden sm:inline">Éditeur</span>
+                </Link>
+              </div>
+            </div>
           </div>
         </nav>
 
