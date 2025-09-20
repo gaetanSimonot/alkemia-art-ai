@@ -182,11 +182,18 @@ const FluidMobileMindMap = ({ onLogout }) => {
   // Gestionnaire tactile universel pour canvas
   const handleTouchStart = useCallback((e) => {
     const touch = e.touches[0];
-    const rect = canvasRef.current.getBoundingClientRect();
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
     const canvasX = (touch.clientX - rect.left - canvasTransform.translateX) / canvasTransform.scale;
     const canvasY = (touch.clientY - rect.top - canvasTransform.translateY) / canvasTransform.scale;
 
     if (e.touches.length === 1) {
+      // Check si on touche un bouton d'action (éviter les conflits)
+      if (e.target.closest('button')) {
+        return; // Laisser les boutons gérer leurs propres événements
+      }
+
       // Un doigt - check si on touche une bulle
       let touchedBall = null;
       for (const category of categories) {
@@ -202,13 +209,23 @@ const FluidMobileMindMap = ({ onLogout }) => {
       }
 
       if (touchedBall) {
-        // Touche une bulle - la sélectionner
-        setActiveBall(touchedBall);
-        setDragStart({ x: canvasX, y: canvasY });
+        // Touche une bulle
+        if (activeBall === touchedBall) {
+          // Même bulle - ne rien faire, garder la sélection
+          setDragStart({ x: canvasX, y: canvasY });
+        } else {
+          // Nouvelle bulle - la sélectionner et désactiver le mode
+          setActiveBall(touchedBall);
+          setDragMode(null); // Reset le mode pour nouvelle sélection
+          setDragStart({ x: canvasX, y: canvasY });
+          showNotification(`${categories.find(cat => cat.id === touchedBall)?.name} sélectionnée`, 'info');
+        }
       } else {
-        // Touche le vide - désélectionner
-        setActiveBall(null);
-        setDragMode(null);
+        // Touche le vide - désélectionner seulement si pas en mode actif
+        if (!dragMode) {
+          setActiveBall(null);
+          setDragMode(null);
+        }
         panStartRef.current = { x: touch.clientX, y: touch.clientY };
       }
     } else if (e.touches.length === 2) {
@@ -220,7 +237,7 @@ const FluidMobileMindMap = ({ onLogout }) => {
       lastTouchDistance.current = distance;
       isPanning.current = true;
     }
-  }, [categories, ballPositions, ballSizes, canvasTransform]);
+  }, [categories, ballPositions, ballSizes, canvasTransform, activeBall, dragMode]);
 
   const handleTouchMove = useCallback((e) => {
     e.preventDefault();
@@ -288,6 +305,9 @@ const FluidMobileMindMap = ({ onLogout }) => {
     setIsDragging(false);
     isPanning.current = false;
     lastTouchDistance.current = 0;
+
+    // Ne pas désactiver le mode après un drag - garder la sélection active
+    // Cela permet de continuer à utiliser les boutons
   }, []);
 
   // Actions sur les bulles
@@ -318,6 +338,11 @@ const FluidMobileMindMap = ({ onLogout }) => {
         setActiveBall(null);
         setDragMode(null);
         showNotification(`Ouverture de ${category.name}`, 'success');
+        break;
+      case 'close':
+        setActiveBall(null);
+        setDragMode(null);
+        showNotification('Bulle désélectionnée', 'info');
         break;
     }
   };
@@ -613,14 +638,15 @@ const FluidMobileMindMap = ({ onLogout }) => {
                 <span className="text-xs opacity-70">{category.files}</span>
               </div>
 
-              {/* Menu d'actions - affiché quand la bulle est sélectionnée */}
+              {/* Menu d'actions - suit la bulle en temps réel */}
               {isActive && (
                 <div
-                  className="absolute flex gap-2"
+                  className="absolute flex gap-2 transition-all duration-75"
                   style={{
                     left: position.x - 60,
-                    top: position.y - size/2 - 60,
-                    zIndex: 60
+                    top: position.y - size/2 - 70, // Un peu plus haut pour éviter le chevauchement
+                    zIndex: 60,
+                    pointerEvents: 'auto' // S'assurer que les boutons restent cliquables
                   }}
                 >
                   {/* Bouton Déplacer */}
@@ -653,6 +679,15 @@ const FluidMobileMindMap = ({ onLogout }) => {
                   >
                     <Eye size={18} />
                   </button>
+
+                  {/* Bouton Fermer/Désélectionner */}
+                  <button
+                    onTouchStart={(e) => handleBallAction(e, 'close')}
+                    onClick={(e) => handleBallAction(e, 'close')}
+                    className="interactive w-12 h-12 rounded-full bg-red-600/80 flex items-center justify-center text-white hover:bg-red-700 transition-all backdrop-blur-lg border border-white/20"
+                  >
+                    <X size={18} />
+                  </button>
                 </div>
               )}
             </div>
@@ -661,13 +696,16 @@ const FluidMobileMindMap = ({ onLogout }) => {
       </div>
 
       {/* Instructions */}
-      <div className="fixed bottom-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg p-3 text-white text-xs max-w-64">
+      <div className="fixed bottom-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg p-3 text-white text-xs max-w-72">
         <div className="space-y-1">
-          <div>👆 Tap bulle → sélectionner</div>
-          <div>🔄 Cliquez boutons → activer mode</div>
-          <div>✋ Puis glissez → {dragMode === 'move' ? 'déplacer' : dragMode === 'resize' ? 'redimensionner' : 'naviguer'}</div>
-          <div className={`font-bold ${dragMode ? 'text-yellow-300' : 'text-gray-400'}`}>
-            Mode: {dragMode === 'move' ? '🔄 DÉPLACEMENT' : dragMode === 'resize' ? '🔍 TAILLE' : '🚀 NAVIGATION'}
+          <div>👆 <strong>Tap bulle</strong> → sélectionner</div>
+          <div>🎯 <strong>Boutons suivent</strong> la bulle</div>
+          <div>🔄 <strong>Clic mode</strong> → puis glissez partout</div>
+          <div>❌ <strong>Bouton X</strong> → désélectionner</div>
+          <div className={`font-bold ${dragMode ? 'text-yellow-300' : activeBall ? 'text-blue-300' : 'text-gray-400'}`}>
+            {activeBall ?
+              `🎯 ${categories.find(cat => cat.id === activeBall)?.emoji} SÉLECTIONNÉE | Mode: ${dragMode === 'move' ? '🔄 DÉPLACEMENT' : dragMode === 'resize' ? '🔍 TAILLE' : '⚡ PRÊT'}`
+              : '🚀 NAVIGATION LIBRE'}
           </div>
         </div>
       </div>
