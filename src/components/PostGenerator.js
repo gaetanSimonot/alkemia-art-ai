@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Sparkles, Loader, Check, AlertCircle } from 'lucide-react';
-import KonvaBannerEditor from './KonvaBannerEditor';
 
 const PostGenerator = () => {
   const [figurineName, setFigurineName] = useState('');
@@ -304,7 +303,7 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
             </h1>
           </div>
           <p className="text-gray-300 text-sm md:text-base">
-            Génération intelligente de posts pour vos figurines STL
+            Création contenu socials
           </p>
         </div>
 
@@ -482,10 +481,6 @@ IMPORTANT: Réponds UNIQUEMENT avec le JSON, rien d'autre.`
           </div>
         )}
 
-        {/* Section Banner Editor */}
-        <div className="mt-16">
-          <KonvaBannerEditor />
-        </div>
 
         {/* Bouton de configuration flottant */}
         <button
