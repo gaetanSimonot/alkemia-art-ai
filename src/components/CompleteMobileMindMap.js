@@ -40,6 +40,8 @@ const CompleteMobileMindMap = ({ onLogout }) => {
   const [ballPositions, setBallPositions] = useState({});
   const [draggedBall, setDraggedBall] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
+  const [longPressProgress, setLongPressProgress] = useState(0);
+  const [isLongPressing, setIsLongPressing] = useState(null);
 
   // Ref pour le conteneur canvas uniquement
   const canvasRef = useRef();
@@ -236,94 +238,55 @@ const CompleteMobileMindMap = ({ onLogout }) => {
     initializeBallPositions();
   }, []);
 
-  // Empêcher COMPLÈTEMENT le pull-to-refresh et scroll de page
+  // Empêcher seulement le pull-to-refresh, pas tous les événements
   useEffect(() => {
-    // Fonction super restrictive pour empêcher TOUS les gestes
-    const preventAllDefault = (e) => {
-      // Empêcher tous les événements tactiles par défaut
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    };
+    // Fonction sélective - permettre les interactions sur les éléments interactifs
+    const preventSelectiveDefault = (e) => {
+      const target = e.target;
 
-    // Empêcher le pull-to-refresh spécifiquement
-    const preventPullToRefresh = (e) => {
-      const element = e.target;
+      // Permettre les interactions sur les boutons, inputs, et éléments avec des onclick
+      if (target.tagName === 'BUTTON' ||
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.onclick ||
+          target.closest('button') ||
+          target.classList.contains('ball') ||
+          target.classList.contains('interactive')) {
+        return; // Ne pas empêcher sur ces éléments
+      }
+
+      // Empêcher seulement le pull-to-refresh
       const isAtTop = window.pageYOffset === 0;
-      const isScrollingDown = e.touches && e.touches[0] && e.touches[0].clientY > (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : 0);
-
-      if (isAtTop && isScrollingDown) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
+      if (isAtTop && e.type === 'touchstart') {
+        const touch = e.touches[0];
+        if (touch && touch.clientY < 100) { // Seulement en haut de l'écran
+          e.preventDefault();
+        }
       }
     };
 
-    // CSS pour verrouiller complètement la page
+    // CSS moins restrictif
     const originalStyles = {
-      body: {
-        overflow: document.body.style.overflow,
-        height: document.body.style.height,
-        position: document.body.style.position,
-        width: document.body.style.width,
-        touchAction: document.body.style.touchAction
-      },
-      html: {
-        overflow: document.documentElement.style.overflow,
-        height: document.documentElement.style.height,
-        touchAction: document.documentElement.style.touchAction
-      }
+      overflow: document.body.style.overflow,
+      height: document.body.style.height
     };
 
-    // Appliquer les styles restrictifs
+    // Appliquer des styles moins restrictifs
     document.body.style.overflow = 'hidden';
     document.body.style.height = '100vh';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-    document.body.style.touchAction = 'none';
-    document.documentElement.style.overflow = 'hidden';
-    document.documentElement.style.height = '100vh';
-    document.documentElement.style.touchAction = 'none';
 
-    // Ajouter la meta tag pour empêcher le zoom si elle n'existe pas
-    let viewportMeta = document.querySelector('meta[name="viewport"]');
-    if (!viewportMeta.content.includes('user-scalable=no')) {
-      viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
-    }
-
-    // Écouter TOUS les événements tactiles possibles
-    const events = [
-      'touchstart', 'touchmove', 'touchend', 'touchcancel',
-      'gesturestart', 'gesturechange', 'gestureend',
-      'scroll', 'wheel', 'mousewheel', 'DOMMouseScroll'
-    ];
-
-    events.forEach(event => {
-      document.addEventListener(event, preventAllDefault, { passive: false, capture: true });
-      window.addEventListener(event, preventAllDefault, { passive: false, capture: true });
-    });
-
-    // Spécial pull-to-refresh
-    document.addEventListener('touchstart', preventPullToRefresh, { passive: false });
-    document.addEventListener('touchmove', preventPullToRefresh, { passive: false });
+    // Écouter seulement les événements nécessaires
+    document.addEventListener('touchstart', preventSelectiveDefault, { passive: false });
+    document.addEventListener('touchmove', preventSelectiveDefault, { passive: false });
 
     return () => {
-      // Restaurer tous les styles originaux
-      Object.keys(originalStyles.body).forEach(prop => {
-        document.body.style[prop] = originalStyles.body[prop];
-      });
-      Object.keys(originalStyles.html).forEach(prop => {
-        document.documentElement.style[prop] = originalStyles.html[prop];
-      });
+      // Restaurer les styles
+      document.body.style.overflow = originalStyles.overflow;
+      document.body.style.height = originalStyles.height;
 
-      // Supprimer tous les event listeners
-      events.forEach(event => {
-        document.removeEventListener(event, preventAllDefault, { capture: true });
-        window.removeEventListener(event, preventAllDefault, { capture: true });
-      });
-
-      document.removeEventListener('touchstart', preventPullToRefresh);
-      document.removeEventListener('touchmove', preventPullToRefresh);
+      document.removeEventListener('touchstart', preventSelectiveDefault);
+      document.removeEventListener('touchmove', preventSelectiveDefault);
     };
   }, []);
 
@@ -408,13 +371,31 @@ const CompleteMobileMindMap = ({ onLogout }) => {
     }
   }, [longPressTimer]);
 
-  // Gestionnaires pour bulles
+  // Gestionnaires pour bulles avec indicateur de chargement
   const handleBallTouchStart = useCallback((e, categoryId) => {
     e.stopPropagation();
     const touch = e.touches[0];
 
+    setIsLongPressing(categoryId);
+    setLongPressProgress(0);
+
+    // Animation de progression
+    const progressInterval = setInterval(() => {
+      setLongPressProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          return 100;
+        }
+        return prev + 10; // 10% toutes les 100ms = 1 seconde
+      });
+    }, 100);
+
     // Long press pour ouvrir
     const timer = setTimeout(() => {
+      clearInterval(progressInterval);
+      setIsLongPressing(null);
+      setLongPressProgress(0);
+
       const category = categories.find(cat => cat.id === categoryId);
       setOpenCategory(category);
       showNotification(`${category?.name} ouvert`, 'info');
@@ -445,6 +426,8 @@ const CompleteMobileMindMap = ({ onLogout }) => {
       if (longPressTimer && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
         clearTimeout(longPressTimer);
         setLongPressTimer(null);
+        setIsLongPressing(null);
+        setLongPressProgress(0);
       }
     }
   }, [draggedBall, panStart, longPressTimer, canvasTransform.scale]);
@@ -700,7 +683,7 @@ const CompleteMobileMindMap = ({ onLogout }) => {
           <div className="flex justify-around items-center">
             <button
               onClick={addTextNote}
-              className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-blue-600/80 text-white text-sm"
+              className="interactive flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-blue-600/80 text-white text-sm hover:bg-blue-700/80 transition-all"
             >
               <Type size={20} />
               <span>Texte</span>
@@ -708,7 +691,7 @@ const CompleteMobileMindMap = ({ onLogout }) => {
 
             <button
               onClick={toggleRecording}
-              className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl text-white text-sm transition-all ${
+              className={`interactive flex flex-col items-center gap-1 px-6 py-2 rounded-xl text-white text-sm transition-all ${
                 isRecording
                   ? 'bg-red-600 animate-pulse shadow-lg shadow-red-500/50'
                   : 'bg-gray-600 hover:bg-red-500'
@@ -720,7 +703,7 @@ const CompleteMobileMindMap = ({ onLogout }) => {
 
             <button
               onClick={addPhotoNote}
-              className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-green-600/80 text-white text-sm hover:bg-green-700/80 transition-all"
+              className="interactive flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-green-600/80 text-white text-sm hover:bg-green-700/80 transition-all"
             >
               <Camera size={20} />
               <span>Photo</span>
@@ -728,7 +711,7 @@ const CompleteMobileMindMap = ({ onLogout }) => {
 
             <button
               onClick={() => setShowRichEditor(true)}
-              className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-purple-600/80 text-white text-sm"
+              className="interactive flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-purple-600/80 text-white text-sm hover:bg-purple-700/80 transition-all"
             >
               <Edit3 size={20} />
               <span>Riche</span>
@@ -803,7 +786,7 @@ const CompleteMobileMindMap = ({ onLogout }) => {
           return (
             <div
               key={category.id}
-              className={`absolute rounded-full flex flex-col items-center justify-center text-white font-bold cursor-pointer transition-all duration-300 select-none ${
+              className={`ball absolute rounded-full flex flex-col items-center justify-center text-white font-bold cursor-pointer transition-all duration-300 select-none ${
                 isSelected ? 'ring-4 ring-white/50 shadow-2xl' : 'hover:scale-110'
               }`}
               style={{
@@ -826,6 +809,24 @@ const CompleteMobileMindMap = ({ onLogout }) => {
                 {category.name}
               </span>
               <span className="text-xs opacity-70">{category.files}</span>
+
+              {/* Indicateur de chargement */}
+              {isLongPressing === category.id && (
+                <div
+                  className="absolute inset-0 rounded-full flex items-center justify-center"
+                  style={{
+                    background: `conic-gradient(${theme.accent} ${longPressProgress * 3.6}deg, transparent 0deg)`,
+                    padding: '2px'
+                  }}
+                >
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center"
+                    style={{ background: theme.surface }}
+                  >
+                    <div className="w-4 h-4 rounded-full bg-white animate-pulse"></div>
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -884,13 +885,13 @@ const CompleteMobileMindMap = ({ onLogout }) => {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={saveTextNote}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold"
+                className="interactive flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all"
               >
                 Sauvegarder
               </button>
               <button
                 onClick={() => setShowTextModal(false)}
-                className="px-6 py-3 bg-gray-600 text-white rounded-lg font-bold"
+                className="interactive px-6 py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700 transition-all"
               >
                 Annuler
               </button>
