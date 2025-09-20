@@ -236,20 +236,54 @@ const CompleteMobileMindMap = ({ onLogout }) => {
     initializeBallPositions();
   }, []);
 
-  // Empêcher le zoom/scroll du navigateur sur la zone canvas uniquement
+  // Empêcher le zoom/scroll du navigateur et le pull-to-refresh
   useEffect(() => {
-    const preventDefaultTouch = (e) => {
-      if (canvasRef.current && canvasRef.current.contains(e.target)) {
+    // Désactiver le scroll/zoom de la page entière
+    const preventPageScroll = (e) => {
+      e.preventDefault();
+    };
+
+    // Désactiver le pull-to-refresh sur mobile
+    const disablePullToRefresh = (e) => {
+      if (e.touches.length !== 1) return;
+      const clientY = e.touches[0].clientY;
+      // Si on est en haut de la page et qu'on tire vers le bas
+      if (window.scrollY === 0 && clientY > e.touches[0].clientY) {
         e.preventDefault();
       }
     };
 
-    document.addEventListener('touchstart', preventDefaultTouch, { passive: false });
-    document.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+    // Appliquer à tout le document pour éviter les problèmes
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.height = '100vh';
+    document.documentElement.style.height = '100vh';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+
+    // Empêcher tous les gestes tactiles par défaut
+    document.addEventListener('touchstart', preventPageScroll, { passive: false });
+    document.addEventListener('touchmove', preventPageScroll, { passive: false });
+    document.addEventListener('touchend', preventPageScroll, { passive: false });
+    document.addEventListener('gesturestart', preventPageScroll, { passive: false });
+    document.addEventListener('gesturechange', preventPageScroll, { passive: false });
+    document.addEventListener('gestureend', preventPageScroll, { passive: false });
 
     return () => {
-      document.removeEventListener('touchstart', preventDefaultTouch);
-      document.removeEventListener('touchmove', preventDefaultTouch);
+      // Restaurer les styles par défaut
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.height = '';
+      document.documentElement.style.height = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+
+      document.removeEventListener('touchstart', preventPageScroll);
+      document.removeEventListener('touchmove', preventPageScroll);
+      document.removeEventListener('touchend', preventPageScroll);
+      document.removeEventListener('gesturestart', preventPageScroll);
+      document.removeEventListener('gesturechange', preventPageScroll);
+      document.removeEventListener('gestureend', preventPageScroll);
     };
   }, []);
 
@@ -420,18 +454,21 @@ const CompleteMobileMindMap = ({ onLogout }) => {
     }
   };
 
-  const startRecording = () => {
+  const toggleRecording = () => {
     if (!openCategory) {
       showNotification('Ouvrez une catégorie d\'abord', 'warning');
       return;
     }
-    setIsRecording(true);
-    showNotification('Enregistrement démarré...', 'info');
 
-    setTimeout(() => {
+    if (isRecording) {
+      // Arrêter l'enregistrement
       setIsRecording(false);
       showNotification(`Note vocale ajoutée à ${openCategory.name}`, 'success');
-    }, 10000);
+    } else {
+      // Démarrer l'enregistrement
+      setIsRecording(true);
+      showNotification('Enregistrement en cours... Appuyez à nouveau pour arrêter', 'info');
+    }
   };
 
   const resetView = () => {
@@ -571,13 +608,15 @@ const CompleteMobileMindMap = ({ onLogout }) => {
             </button>
 
             <button
-              onClick={startRecording}
-              className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl text-white text-sm ${
-                isRecording ? 'bg-red-600/80 animate-pulse' : 'bg-red-500/80'
+              onClick={toggleRecording}
+              className={`flex flex-col items-center gap-1 px-6 py-2 rounded-xl text-white text-sm transition-all ${
+                isRecording
+                  ? 'bg-red-600 animate-pulse shadow-lg shadow-red-500/50'
+                  : 'bg-gray-600 hover:bg-red-500'
               }`}
             >
-              <Mic size={24} />
-              <span>{isRecording ? 'Stop' : 'Vocal'}</span>
+              {isRecording ? <MicOff size={24} /> : <Mic size={24} />}
+              <span>{isRecording ? 'Arrêter' : 'Vocal'}</span>
             </button>
 
             <button className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-green-600/80 text-white text-sm">
