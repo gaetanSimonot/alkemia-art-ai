@@ -5,7 +5,7 @@ import {
   Volume2, VolumeX, Sun, Moon, Palette, RotateCcw, ArrowLeft,
   Edit3, Trash2, Save, Share2, FolderPlus, File, Folder,
   ChevronRight, ChevronDown, Send, Download, Upload,
-  Move3D, ZoomIn, Eye, Maximize2
+  Move, ZoomIn, Eye, Maximize2
 } from 'lucide-react';
 
 const FluidMobileMindMap = ({ onLogout }) => {
@@ -625,7 +625,7 @@ const FluidMobileMindMap = ({ onLogout }) => {
                       dragMode === 'move' ? 'bg-blue-600 scale-110' : 'bg-gray-700/80'
                     } backdrop-blur-lg border border-white/20`}
                   >
-                    <Move3D size={18} />
+                    <Move size={18} />
                   </button>
 
                   {/* Bouton Redimensionner */}
