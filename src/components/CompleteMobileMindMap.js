@@ -236,54 +236,94 @@ const CompleteMobileMindMap = ({ onLogout }) => {
     initializeBallPositions();
   }, []);
 
-  // Empêcher le zoom/scroll du navigateur et le pull-to-refresh
+  // Empêcher COMPLÈTEMENT le pull-to-refresh et scroll de page
   useEffect(() => {
-    // Désactiver le scroll/zoom de la page entière
-    const preventPageScroll = (e) => {
+    // Fonction super restrictive pour empêcher TOUS les gestes
+    const preventAllDefault = (e) => {
+      // Empêcher tous les événements tactiles par défaut
       e.preventDefault();
+      e.stopPropagation();
+      return false;
     };
 
-    // Désactiver le pull-to-refresh sur mobile
-    const disablePullToRefresh = (e) => {
-      if (e.touches.length !== 1) return;
-      const clientY = e.touches[0].clientY;
-      // Si on est en haut de la page et qu'on tire vers le bas
-      if (window.scrollY === 0 && clientY > e.touches[0].clientY) {
+    // Empêcher le pull-to-refresh spécifiquement
+    const preventPullToRefresh = (e) => {
+      const element = e.target;
+      const isAtTop = window.pageYOffset === 0;
+      const isScrollingDown = e.touches && e.touches[0] && e.touches[0].clientY > (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : 0);
+
+      if (isAtTop && isScrollingDown) {
         e.preventDefault();
+        e.stopPropagation();
+        return false;
       }
     };
 
-    // Appliquer à tout le document pour éviter les problèmes
+    // CSS pour verrouiller complètement la page
+    const originalStyles = {
+      body: {
+        overflow: document.body.style.overflow,
+        height: document.body.style.height,
+        position: document.body.style.position,
+        width: document.body.style.width,
+        touchAction: document.body.style.touchAction
+      },
+      html: {
+        overflow: document.documentElement.style.overflow,
+        height: document.documentElement.style.height,
+        touchAction: document.documentElement.style.touchAction
+      }
+    };
+
+    // Appliquer les styles restrictifs
     document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
     document.body.style.height = '100vh';
-    document.documentElement.style.height = '100vh';
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
+    document.body.style.touchAction = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.height = '100vh';
+    document.documentElement.style.touchAction = 'none';
 
-    // Empêcher tous les gestes tactiles par défaut
-    document.addEventListener('touchstart', preventPageScroll, { passive: false });
-    document.addEventListener('touchmove', preventPageScroll, { passive: false });
-    document.addEventListener('touchend', preventPageScroll, { passive: false });
-    document.addEventListener('gesturestart', preventPageScroll, { passive: false });
-    document.addEventListener('gesturechange', preventPageScroll, { passive: false });
-    document.addEventListener('gestureend', preventPageScroll, { passive: false });
+    // Ajouter la meta tag pour empêcher le zoom si elle n'existe pas
+    let viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (!viewportMeta.content.includes('user-scalable=no')) {
+      viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+    }
+
+    // Écouter TOUS les événements tactiles possibles
+    const events = [
+      'touchstart', 'touchmove', 'touchend', 'touchcancel',
+      'gesturestart', 'gesturechange', 'gestureend',
+      'scroll', 'wheel', 'mousewheel', 'DOMMouseScroll'
+    ];
+
+    events.forEach(event => {
+      document.addEventListener(event, preventAllDefault, { passive: false, capture: true });
+      window.addEventListener(event, preventAllDefault, { passive: false, capture: true });
+    });
+
+    // Spécial pull-to-refresh
+    document.addEventListener('touchstart', preventPullToRefresh, { passive: false });
+    document.addEventListener('touchmove', preventPullToRefresh, { passive: false });
 
     return () => {
-      // Restaurer les styles par défaut
-      document.body.style.overflow = '';
-      document.documentElement.style.overflow = '';
-      document.body.style.height = '';
-      document.documentElement.style.height = '';
-      document.body.style.position = '';
-      document.body.style.width = '';
+      // Restaurer tous les styles originaux
+      Object.keys(originalStyles.body).forEach(prop => {
+        document.body.style[prop] = originalStyles.body[prop];
+      });
+      Object.keys(originalStyles.html).forEach(prop => {
+        document.documentElement.style[prop] = originalStyles.html[prop];
+      });
 
-      document.removeEventListener('touchstart', preventPageScroll);
-      document.removeEventListener('touchmove', preventPageScroll);
-      document.removeEventListener('touchend', preventPageScroll);
-      document.removeEventListener('gesturestart', preventPageScroll);
-      document.removeEventListener('gesturechange', preventPageScroll);
-      document.removeEventListener('gestureend', preventPageScroll);
+      // Supprimer tous les event listeners
+      events.forEach(event => {
+        document.removeEventListener(event, preventAllDefault, { capture: true });
+        window.removeEventListener(event, preventAllDefault, { capture: true });
+      });
+
+      document.removeEventListener('touchstart', preventPullToRefresh);
+      document.removeEventListener('touchmove', preventPullToRefresh);
     };
   }, []);
 
