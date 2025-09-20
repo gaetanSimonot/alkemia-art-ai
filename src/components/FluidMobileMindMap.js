@@ -244,44 +244,39 @@ const FluidMobileMindMap = ({ onLogout }) => {
       lastTouchDistance.current = distance;
     } else if (e.touches.length === 1) {
       const touch = e.touches[0];
+      const rect = canvasRef.current.getBoundingClientRect();
+      const canvasX = (touch.clientX - rect.left - canvasTransform.translateX) / canvasTransform.scale;
+      const canvasY = (touch.clientY - rect.top - canvasTransform.translateY) / canvasTransform.scale;
 
       if (activeBall && dragMode === 'move') {
-        // Déplacer la bulle sélectionnée
-        const rect = canvasRef.current.getBoundingClientRect();
-        const canvasX = (touch.clientX - rect.left - canvasTransform.translateX) / canvasTransform.scale;
-        const canvasY = (touch.clientY - rect.top - canvasTransform.translateY) / canvasTransform.scale;
-
+        // MODE DÉPLACEMENT - déplacer la bulle
         setBallPositions(prev => ({
           ...prev,
           [activeBall]: { x: canvasX, y: canvasY }
         }));
         setIsDragging(true);
       } else if (activeBall && dragMode === 'resize') {
-        // Redimensionner la bulle
-        const rect = canvasRef.current.getBoundingClientRect();
-        const canvasX = (touch.clientX - rect.left - canvasTransform.translateX) / canvasTransform.scale;
-        const canvasY = (touch.clientY - rect.top - canvasTransform.translateY) / canvasTransform.scale;
-
+        // MODE REDIMENSIONNEMENT - redimensionner selon la distance du centre
         const ballPos = ballPositions[activeBall];
         const distance = Math.sqrt(
           Math.pow(canvasX - ballPos.x, 2) + Math.pow(canvasY - ballPos.y, 2)
         );
-        const newSize = Math.max(40, Math.min(120, distance * 2));
+        const newSize = Math.max(40, Math.min(150, distance * 2));
 
         setBallSizes(prev => ({
           ...prev,
           [activeBall]: newSize
         }));
         setIsDragging(true);
-      } else if (!activeBall) {
-        // Pan du canvas
+      } else if (!activeBall || !dragMode) {
+        // Pas de bulle active ou pas de mode - pan du canvas
         const deltaX = touch.clientX - panStartRef.current.x;
         const deltaY = touch.clientY - panStartRef.current.y;
 
         setCanvasTransform(prev => ({
           ...prev,
-          translateX: prev.translateX + deltaX,
-          translateY: prev.translateY + deltaY
+          translateX: prev.translateX + deltaX * 0.5, // Plus fluide
+          translateY: prev.translateY + deltaY * 0.5
         }));
 
         panStartRef.current = { x: touch.clientX, y: touch.clientY };
@@ -296,23 +291,33 @@ const FluidMobileMindMap = ({ onLogout }) => {
   }, []);
 
   // Actions sur les bulles
-  const handleBallAction = (action) => {
+  const handleBallAction = (e, action) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!activeBall) return;
 
     switch (action) {
       case 'move':
-        setDragMode('move');
-        showNotification('Mode déplacement activé - glissez pour bouger', 'info');
+        setDragMode(dragMode === 'move' ? null : 'move');
+        showNotification(
+          dragMode === 'move' ? 'Mode déplacement désactivé' : 'Mode déplacement activé - glissez maintenant!',
+          'info'
+        );
         break;
       case 'resize':
-        setDragMode('resize');
-        showNotification('Mode redimensionnement activé - glissez depuis le centre', 'info');
+        setDragMode(dragMode === 'resize' ? null : 'resize');
+        showNotification(
+          dragMode === 'resize' ? 'Mode redimensionnement désactivé' : 'Mode redimensionnement activé - glissez!',
+          'info'
+        );
         break;
       case 'open':
         const category = categories.find(cat => cat.id === activeBall);
         setOpenCategory(category);
         setActiveBall(null);
         setDragMode(null);
+        showNotification(`Ouverture de ${category.name}`, 'success');
         break;
     }
   };
@@ -620,9 +625,10 @@ const FluidMobileMindMap = ({ onLogout }) => {
                 >
                   {/* Bouton Déplacer */}
                   <button
-                    onClick={() => handleBallAction('move')}
+                    onTouchStart={(e) => handleBallAction(e, 'move')}
+                    onClick={(e) => handleBallAction(e, 'move')}
                     className={`interactive w-12 h-12 rounded-full flex items-center justify-center text-white transition-all ${
-                      dragMode === 'move' ? 'bg-blue-600 scale-110' : 'bg-gray-700/80'
+                      dragMode === 'move' ? 'bg-blue-600 scale-110 shadow-lg shadow-blue-500/50' : 'bg-gray-700/80 hover:bg-blue-500/50'
                     } backdrop-blur-lg border border-white/20`}
                   >
                     <Move size={18} />
@@ -630,9 +636,10 @@ const FluidMobileMindMap = ({ onLogout }) => {
 
                   {/* Bouton Redimensionner */}
                   <button
-                    onClick={() => handleBallAction('resize')}
+                    onTouchStart={(e) => handleBallAction(e, 'resize')}
+                    onClick={(e) => handleBallAction(e, 'resize')}
                     className={`interactive w-12 h-12 rounded-full flex items-center justify-center text-white transition-all ${
-                      dragMode === 'resize' ? 'bg-purple-600 scale-110' : 'bg-gray-700/80'
+                      dragMode === 'resize' ? 'bg-purple-600 scale-110 shadow-lg shadow-purple-500/50' : 'bg-gray-700/80 hover:bg-purple-500/50'
                     } backdrop-blur-lg border border-white/20`}
                   >
                     <Maximize2 size={18} />
@@ -640,8 +647,9 @@ const FluidMobileMindMap = ({ onLogout }) => {
 
                   {/* Bouton Ouvrir */}
                   <button
-                    onClick={() => handleBallAction('open')}
-                    className="interactive w-12 h-12 rounded-full bg-green-600/80 flex items-center justify-center text-white hover:bg-green-700 transition-all backdrop-blur-lg border border-white/20"
+                    onTouchStart={(e) => handleBallAction(e, 'open')}
+                    onClick={(e) => handleBallAction(e, 'open')}
+                    className="interactive w-12 h-12 rounded-full bg-green-600/80 flex items-center justify-center text-white hover:bg-green-700 transition-all backdrop-blur-lg border border-white/20 shadow-lg"
                   >
                     <Eye size={18} />
                   </button>
@@ -655,9 +663,12 @@ const FluidMobileMindMap = ({ onLogout }) => {
       {/* Instructions */}
       <div className="fixed bottom-4 left-4 bg-black/50 backdrop-blur-sm rounded-lg p-3 text-white text-xs max-w-64">
         <div className="space-y-1">
-          <div>👆 Toucher bulle → sélectionner</div>
-          <div>✌️ 2 doigts → zoom</div>
-          <div>🔄 Mode actif: {dragMode || 'navigation'}</div>
+          <div>👆 Tap bulle → sélectionner</div>
+          <div>🔄 Cliquez boutons → activer mode</div>
+          <div>✋ Puis glissez → {dragMode === 'move' ? 'déplacer' : dragMode === 'resize' ? 'redimensionner' : 'naviguer'}</div>
+          <div className={`font-bold ${dragMode ? 'text-yellow-300' : 'text-gray-400'}`}>
+            Mode: {dragMode === 'move' ? '🔄 DÉPLACEMENT' : dragMode === 'resize' ? '🔍 TAILLE' : '🚀 NAVIGATION'}
+          </div>
         </div>
       </div>
 
