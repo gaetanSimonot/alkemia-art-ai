@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import PasswordProtection from './PasswordProtection';
 import MindMapNotes from './MindMapNotes';
+import MobileMindMapNotes from './MobileMindMapNotes';
 
 const ProtectedMindMap = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Vérifier si l'utilisateur est déjà authentifié (session)
+  // Vérifier si l'utilisateur est déjà authentifié (session) et détecter mobile
   useEffect(() => {
     const checkAuth = () => {
       const authTime = localStorage.getItem('mindmap_auth_time');
@@ -29,7 +31,21 @@ const ProtectedMindMap = () => {
       setIsLoading(false);
     };
 
+    const checkIfMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                           || window.innerWidth <= 768
+                           || 'ontouchstart' in window;
+      setIsMobile(isMobileDevice);
+    };
+
     checkAuth();
+    checkIfMobile();
+
+    // Écouter les changements de taille d'écran
+    const handleResize = () => checkIfMobile();
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const handlePasswordCorrect = () => {
@@ -58,7 +74,8 @@ const ProtectedMindMap = () => {
     return <PasswordProtection onPasswordCorrect={handlePasswordCorrect} />;
   }
 
-  return <MindMapNotes onLogout={handleLogout} />;
+  // Choisir le composant approprié selon la plateforme
+  return isMobile ? <MobileMindMapNotes onLogout={handleLogout} /> : <MindMapNotes onLogout={handleLogout} />;
 };
 
 export default ProtectedMindMap;
