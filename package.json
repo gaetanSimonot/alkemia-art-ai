@@ -1,6 +1,6 @@
 {
   "name": "alkemia-art-ai",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Générateur IA de posts pour figurines STL - Alkemia Art",
   "main": "src/index.js",
   "scripts": {
