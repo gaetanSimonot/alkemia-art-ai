@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PasswordProtection from './PasswordProtection';
 import MindMapNotes from './MindMapNotes';
-import FluidMobileMindMap from './FluidMobileMindMap';
+import SimpleMindMap from './SimpleMindMap';
 
 const ProtectedMindMap = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -75,7 +75,7 @@ const ProtectedMindMap = () => {
   }
 
   // Choisir le composant approprié selon la plateforme
-  return isMobile ? <FluidMobileMindMap onLogout={handleLogout} /> : <MindMapNotes onLogout={handleLogout} />;
+  return isMobile ? <SimpleMindMap onLogout={handleLogout} /> : <MindMapNotes onLogout={handleLogout} />;
 };
 
 export default ProtectedMindMap;
