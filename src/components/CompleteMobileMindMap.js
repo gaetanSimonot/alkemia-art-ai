@@ -424,6 +424,53 @@ const CompleteMobileMindMap = ({ onLogout }) => {
     setShowTextModal(true);
   };
 
+  const addPhotoNote = () => {
+    if (!openCategory) {
+      showNotification('Ouvrez une catégorie d\'abord', 'warning');
+      return;
+    }
+
+    // Créer un input file caché
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment'; // Pour utiliser la caméra arrière par défaut
+
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newNote = {
+            id: `n${Date.now()}`,
+            title: `Photo ${new Date().toLocaleDateString()}`,
+            content: event.target.result,
+            type: 'photo',
+            date: new Date().toISOString().split('T')[0]
+          };
+
+          setCategories(prev => prev.map(cat =>
+            cat.id === openCategory.id
+              ? {
+                  ...cat,
+                  folders: cat.folders.map(folder =>
+                    folder.id === cat.folders[0].id
+                      ? { ...folder, notes: [...folder.notes, newNote] }
+                      : folder
+                  )
+                }
+              : cat
+          ));
+
+          showNotification(`Photo ajoutée à ${openCategory.name}`, 'success');
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+
+    input.click();
+  };
+
   const saveTextNote = () => {
     if (textInput.trim() && openCategory) {
       const newNote = {
@@ -559,7 +606,9 @@ const CompleteMobileMindMap = ({ onLogout }) => {
                     <div key={note.id} className="bg-white/5 backdrop-blur-lg rounded-lg border border-white/10 p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          {note.type === 'voice' ? <Volume2 size={16} /> : <File size={16} />}
+                          {note.type === 'voice' ? <Volume2 size={16} /> :
+                           note.type === 'photo' ? <Camera size={16} /> :
+                           <File size={16} />}
                           <h3 className="text-white font-medium">{note.title}</h3>
                         </div>
                         <div className="flex gap-2">
@@ -578,7 +627,17 @@ const CompleteMobileMindMap = ({ onLogout }) => {
                         </div>
                       </div>
                       {note.content && (
-                        <p className="text-gray-300 text-sm mb-2">{note.content}</p>
+                        <div className="mb-2">
+                          {note.type === 'photo' ? (
+                            <img
+                              src={note.content}
+                              alt={note.title}
+                              className="max-w-full h-32 object-cover rounded-lg"
+                            />
+                          ) : (
+                            <p className="text-gray-300 text-sm">{note.content}</p>
+                          )}
+                        </div>
                       )}
                       <span className="text-xs text-gray-500">{note.date}</span>
                     </div>
@@ -619,7 +678,10 @@ const CompleteMobileMindMap = ({ onLogout }) => {
               <span>{isRecording ? 'Arrêter' : 'Vocal'}</span>
             </button>
 
-            <button className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-green-600/80 text-white text-sm">
+            <button
+              onClick={addPhotoNote}
+              className="flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-green-600/80 text-white text-sm hover:bg-green-700/80 transition-all"
+            >
               <Camera size={20} />
               <span>Photo</span>
             </button>
