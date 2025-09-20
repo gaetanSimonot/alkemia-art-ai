@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { Brain, Palette, Home } from 'lucide-react';
 import PostGenerator from './components/PostGenerator';
-import MindMapNotes from './components/MindMapNotes';
+import ProtectedMindMap from './components/ProtectedMindMap';
 import KonvaBannerEditor from './components/KonvaBannerEditor';
 
 function App() {
@@ -58,7 +58,7 @@ function App() {
         {/* Routes */}
         <Routes>
           <Route path="/" element={<PostGenerator />} />
-          <Route path="/mindmap" element={<MindMapNotes />} />
+          <Route path="/mindmap" element={<ProtectedMindMap />} />
           <Route path="/banner-editor" element={<KonvaBannerEditor />} />
         </Routes>
       </div>
